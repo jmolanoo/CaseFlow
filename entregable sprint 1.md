@@ -6,46 +6,55 @@
 > **Docente Supervisor & Product Owner:** Eduardo Martínez Vidal  
 > **Equipo de Trabajo:** Danna Nerieth Palencia & Jairo Molano Salgado  
 > **Fecha de Cierre Sprint 1:** 03 de noviembre de 2026  
-> **Veredicto Quality Gate:** [VEREDICTO: APROBADO 100%]  
+> **Veredicto Quality Gate:** `[VEREDICTO: APROBADO 100%]`  
 
 ---
 
-## 1. Guía de Ejecución y Visualización en GitHub Codespaces
+## 1. Guía de Ejecución y Visualización en Contenedores Docker (GitHub Codespaces / Linux)
 
-Para visualizar y probar la plataforma en tu entorno de Codespaces (o terminal local Linux), sigue los pasos a continuación:
+Para levantar la plataforma completa en contenedores de forma inmediata y visualizarla en el navegador:
 
-### 1.1. Comando Único Automatizado (Recomendado)
-Desde la raíz del repositorio o del directorio del proyecto (`CaseFlow (Dev)`), ejecuta el script de arranque conjunto:
+### 1.1. Comando Único Docker Compose (Recomendado)
+Desde la raíz del proyecto (`CaseFlow (Dev)`), ejecuta:
 
 ```bash
-cd "/home/ubuntu/CaseFlow (Dev)"
-./start.sh
+docker compose up -d --build
 ```
+*(O de manera equivalente mediante el script de arranque: `./start.sh`)*
 
-Este script se encarga de:
-1. Activar el entorno virtual de Python y levantar el servidor backend **FastAPI con Uvicorn** en `http://0.0.0.0:8000`.
-2. Compilar e iniciar el servidor de desarrollo **Vite SPA (React + TypeScript)** en `http://0.0.0.0:5173`.
+Este comando orquesta automáticamente la construcción y ejecución de los dos microservicios:
+1. **Contenedor `caseflow-backend` (FastAPI + Uvicorn + Python 3.12-slim):**
+   - Expuesto en el puerto `8000`.
+   - Inicializa de forma transparente la base de datos relacional SQLite y la Bóveda Criptográfica AES-256.
+   - Sonda de salud integrada (`healthcheck` en `/api/health`) que garantiza operatividad antes de conectar el frontend.
+2. **Contenedor `caseflow-frontend` (Nginx Alpine + React 18 SPA + Vite):**
+   - Expuesto en el puerto `5173` (y mapeado adicionalmente al puerto `80`).
+   - Servidor web Nginx de alto rendimiento con proxy inverso nativo hacia `/api/` en el backend.
+   - Aislamiento completo, cero conflictos de CORS y latencia mínima.
 
----
-
-### 1.2. Ejecución Manual por Terminales Separadas
-
-Si prefieres ejecutar cada servicio en su propia terminal para inspeccionar los logs en tiempo real:
-
-#### Terminal 1 — Backend REST API (FastAPI):
-```bash
-cd "/home/ubuntu/CaseFlow (Dev)/backend"
-./venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+#### Puntos de Acceso Operativos:
+- **Interfaz Web del Usuario (SPA Trimodal):** `http://localhost:5173` (o el puerto 5173 redirigido en Codespaces)
 - **Documentación Swagger / OpenAPI interactiva:** `http://localhost:8000/api/docs`
 - **Sonda de salud operativa:** `http://localhost:8000/api/health`
 
-#### Terminal 2 — Frontend SPA (React + TypeScript + Tailwind CSS):
+#### Comandos Útiles de Gestión Docker:
+- **Ver logs en tiempo real:** `docker compose logs -f`
+- **Detener contenedores:** `docker compose down`
+
+---
+
+### 1.2. Ejecución Local Nativa (Alternativa sin Docker)
+
+Si prefieres ejecutar directamente sobre el entorno del host sin usar contenedores Docker:
+
 ```bash
-cd "/home/ubuntu/CaseFlow (Dev)/frontend"
-npm run dev -- --host 0.0.0.0 --port 5173
+cd "/home/ubuntu/CaseFlow (Dev)"
+./start.sh native
 ```
-- **Interfaz Web del Usuario:** `http://localhost:5173`
+
+O en terminales separadas:
+- **Backend:** `cd backend && ./venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
+- **Frontend:** `cd frontend && npm run dev -- --host 0.0.0.0 --port 5173`
 
 ---
 
