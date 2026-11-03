@@ -1,0 +1,14 @@
+{
+  "name": "CaseFlow Codespace",
+  "forwardPorts": [80, 8000],
+  "portsAttributes": {
+    "80": {
+      "label": "CaseFlow App (Frontend + API)",
+      "onAutoForward": "notify"
+    },
+    "8000": {
+      "label": "CaseFlow API Docs",
+      "onAutoForward": "silent"
+    }
+  }
+}
