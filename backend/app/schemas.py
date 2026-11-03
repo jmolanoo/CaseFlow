@@ -214,3 +214,45 @@ class AIRefineTicketResponse(BaseModel):
     suggested_category_id: Optional[int] = None
     suggested_priority_id: Optional[int] = None
     analysis: str
+
+# --- Sprint 3: Governance & AI Copilot Schemas ---
+class AIFeatureToggleItem(BaseModel):
+    id: int
+    help_desk_id: int
+    feature_name: str
+    feature_label: str
+    description: str
+    role_requester: bool
+    role_agent: bool
+    role_admin: bool
+    is_enabled: bool
+
+    class Config:
+        from_attributes = True
+
+class AIFeatureToggleUpdate(BaseModel):
+    feature_name: str
+    role_requester: Optional[bool] = None
+    role_agent: Optional[bool] = None
+    role_admin: Optional[bool] = None
+    is_enabled: Optional[bool] = None
+
+class AIFeatureTogglesUpdateRequest(BaseModel):
+    toggles: List[AIFeatureToggleUpdate]
+
+class CopilotSuggestionResponse(BaseModel):
+    suggested_reply: str
+    explanation: str
+    source: str
+
+class CopilotDiagnosisResponse(BaseModel):
+    diagnosis: str
+    recommended_steps: List[str]
+    similar_cases: List[str]
+
+class CopilotSummaryResponse(BaseModel):
+    summary: str
+    key_points: List[str]
+
+class TicketAssignRequest(BaseModel):
+    assignee_id: int

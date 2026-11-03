@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Clock, Send, User, 
-  MessageSquare, AlertCircle
+  MessageSquare, AlertCircle, Sparkles, Activity, FileText, 
+  Check, CornerDownLeft, UserCheck, RefreshCw, CheckCircle2
 } from 'lucide-react';
-import { api, TicketDetail } from '../api';
+import { 
+  api, TicketDetail, CopilotSuggestion, 
+  CopilotDiagnosis, CopilotSummary 
+} from '../api';
 
 interface TicketDetailModalProps {
   slug: string;
   ticketCode: string;
+  currentUser?: { id: number; full_name: string } | null;
   onClose: () => void;
   onTicketUpdated: () => void;
 }
@@ -15,6 +20,7 @@ interface TicketDetailModalProps {
 export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
   slug,
   ticketCode,
+  currentUser,
   onClose,
   onTicketUpdated,
 }) => {
@@ -26,7 +32,16 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
   const [diagnostic, setDiagnostic] = useState('');
   const [showDiagnosticField, setShowDiagnosticField] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Copilot state
+  const [copilotLoading, setCopilotLoading] = useState(false);
+  const [copilotMode, setCopilotMode] = useState<'suggestion' | 'diagnosis' | 'summary' | null>(null);
+  const [suggestion, setSuggestion] = useState<CopilotSuggestion | null>(null);
+  const [diagnosis, setDiagnosis] = useState<CopilotDiagnosis | null>(null);
+  const [summary, setSummary] = useState<CopilotSummary | null>(null);
+  const [copilotFeedback, setCopilotFeedback] = useState<string | null>(null);
 
   const fetchDetail = async () => {
     setLoading(true);
@@ -67,6 +82,20 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
     }
   };
 
+  const handleAssignToMe = async () => {
+    if (!currentUser) return;
+    setAssigning(true);
+    try {
+      await api.assignTicket(slug, ticketCode, currentUser.id);
+      fetchDetail();
+      onTicketUpdated();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
@@ -82,6 +111,55 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
     } finally {
       setSubmittingComment(false);
     }
+  };
+
+  // Copilot triggers
+  const handleFetchSuggestion = async () => {
+    setCopilotLoading(true);
+    setCopilotMode('suggestion');
+    try {
+      const res = await api.getCopilotSuggestedReply(slug, ticketCode);
+      setSuggestion(res);
+    } catch (err: any) {
+      alert(err.message || 'Error al generar sugerencia');
+      setCopilotMode(null);
+    } finally {
+      setCopilotLoading(false);
+    }
+  };
+
+  const handleFetchDiagnosis = async () => {
+    setCopilotLoading(true);
+    setCopilotMode('diagnosis');
+    try {
+      const res = await api.getCopilotDiagnosis(slug, ticketCode);
+      setDiagnosis(res);
+    } catch (err: any) {
+      alert(err.message || 'Error al generar diagnóstico');
+      setCopilotMode(null);
+    } finally {
+      setCopilotLoading(false);
+    }
+  };
+
+  const handleFetchSummary = async () => {
+    setCopilotLoading(true);
+    setCopilotMode('summary');
+    try {
+      const res = await api.getCopilotSummary(slug, ticketCode);
+      setSummary(res);
+    } catch (err: any) {
+      alert(err.message || 'Error al generar resumen');
+      setCopilotMode(null);
+    } finally {
+      setCopilotLoading(false);
+    }
+  };
+
+  const handleInsertSuggestion = (text: string) => {
+    setCommentText(text);
+    setCopilotFeedback('¡Propuesta insertada en la respuesta!');
+    setTimeout(() => setCopilotFeedback(null), 3000);
   };
 
   if (loading) {
@@ -112,11 +190,11 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-hairline bg-surface shadow-2xl overflow-hidden transition-all">
+      <div className="relative w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl border border-hairline bg-surface shadow-2xl overflow-hidden transition-all">
         {/* Top Header */}
         <div className="p-5 border-b border-hairline flex items-start justify-between gap-4 bg-canvas">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
+          <div className="space-y-1.5 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold text-rose-500 px-2.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20">
                 {ticket.ticket_code}
               </span>
@@ -126,6 +204,22 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
               <span className="text-xs px-2.5 py-0.5 rounded-md bg-surface border border-hairline text-secondary uppercase font-semibold">
                 {ticket.priority_name}
               </span>
+              {ticket.assignee_name ? (
+                <span className="text-xs px-2.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-500 font-semibold flex items-center gap-1">
+                  <UserCheck className="w-3 h-3" />
+                  {ticket.assignee_name}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={assigning}
+                  onClick={handleAssignToMe}
+                  className="text-xs px-2.5 py-0.5 rounded-md bg-surface hover:bg-canvas border border-hairline text-secondary hover:text-primary font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <UserCheck className="w-3 h-3 text-rose-500" />
+                  {assigning ? 'Asignando...' : 'Tomar Caso (Asignarme)'}
+                </button>
+              )}
             </div>
             <h2 className="text-base font-bold text-primary leading-snug">
               {ticket.title}
@@ -155,7 +249,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
               >
                 <option value="open">Abierto (En cola)</option>
                 <option value="in_progress">En Progreso</option>
-                <option value="waiting_client">En Espera de Información</option>
+                <option value="waiting">En Espera de Información</option>
                 <option value="resolved">Resuelto y Cerrado</option>
               </select>
             </div>
@@ -175,10 +269,10 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
           {showDiagnosticField && (
             <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-2.5 shadow-xs">
               <span className="text-xs font-bold text-rose-500 block">
-                Diagnóstico de Cierre y Solución:
+                Diagnóstico de Cierre y Aprendizaje Activo:
               </span>
               <p className="text-xs text-secondary">
-                Documenta la causa y solución aplicada. Esta información se integrará automáticamente en la memoria de soporte del equipo.
+                Documenta la causa y la solución aplicada. Esta información se inyectará de forma automática e inmediata en la memoria de soporte del equipo para que la IA la utilice en incidentes similares.
               </p>
               <textarea
                 rows={2}
@@ -201,7 +295,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
                   onClick={() => handleStatusChange('resolved')}
                   className="craft-btn-primary text-xs"
                 >
-                  Confirmar Cierre
+                  Confirmar Cierre y Enriquecer Memoria
                 </button>
               </div>
             </div>
@@ -215,10 +309,189 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
             <p className="text-xs text-primary leading-relaxed whitespace-pre-wrap">
               {ticket.description}
             </p>
-            <div className="pt-2 text-xs text-secondary flex items-center gap-1.5 border-t border-hairline">
-              <User className="w-3.5 h-3.5 text-secondary" />
-              Solicitado por: <strong className="text-primary">{ticket.requester_name}</strong>
+            <div className="pt-2 text-xs text-secondary flex items-center justify-between border-t border-hairline">
+              <span className="flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-secondary" />
+                Solicitado por: <strong className="text-primary">{ticket.requester_name}</strong>
+              </span>
+              {ticket.assignee_name && (
+                <span className="text-[11px] text-secondary">
+                  Especialista a cargo: <strong className="text-primary">{ticket.assignee_name}</strong>
+                </span>
+              )}
             </div>
+          </div>
+
+          {/* Sprint 3: Copilot Action Bar */}
+          <div className="rounded-xl border border-hairline bg-canvas p-4 space-y-3 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-xs font-bold text-primary">
+                  Copiloto de Soporte Asistido
+                </span>
+              </div>
+              <span className="text-[11px] text-secondary">
+                Alimentado por la memoria viva del equipo
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={copilotLoading}
+                onClick={handleFetchSuggestion}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-150 border ${
+                  copilotMode === 'suggestion'
+                    ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
+                    : 'bg-surface border-hairline text-secondary hover:text-primary hover:border-rose-500/30'
+                }`}
+              >
+                <Sparkles className="w-3 h-3 text-rose-500" />
+                Sugerir Respuesta
+              </button>
+
+              <button
+                type="button"
+                disabled={copilotLoading}
+                onClick={handleFetchDiagnosis}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-150 border ${
+                  copilotMode === 'diagnosis'
+                    ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
+                    : 'bg-surface border-hairline text-secondary hover:text-primary hover:border-rose-500/30'
+                }`}
+              >
+                <Activity className="w-3 h-3 text-rose-500" />
+                Diagnóstico y Casos Similares
+              </button>
+
+              <button
+                type="button"
+                disabled={copilotLoading}
+                onClick={handleFetchSummary}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-150 border ${
+                  copilotMode === 'summary'
+                    ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
+                    : 'bg-surface border-hairline text-secondary hover:text-primary hover:border-rose-500/30'
+                }`}
+              >
+                <FileText className="w-3 h-3 text-rose-500" />
+                Resumen Ejecutivo
+              </button>
+            </div>
+
+            {/* Copilot Loading */}
+            {copilotLoading && (
+              <div className="p-4 rounded-xl bg-surface border border-hairline text-center text-xs text-secondary flex items-center justify-center gap-2 animate-pulse">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-rose-500" />
+                Consultando la memoria del equipo y formulando asistencia técnica...
+              </div>
+            )}
+
+            {/* Copilot Suggestion Card */}
+            {copilotMode === 'suggestion' && suggestion && !copilotLoading && (
+              <div className="p-4 rounded-xl bg-surface border border-rose-500/25 space-y-3 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between text-xs text-secondary border-b border-hairline pb-2">
+                  <span className="font-bold text-rose-500 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Propuesta del Copiloto
+                  </span>
+                  <span className="text-[11px] text-secondary">
+                    {suggestion.source}
+                  </span>
+                </div>
+                <p className="text-xs text-primary leading-relaxed whitespace-pre-wrap font-sans">
+                  {suggestion.suggested_reply}
+                </p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-hairline text-xs">
+                  <span className="text-secondary text-[11px] italic">
+                    {suggestion.explanation}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleInsertSuggestion(suggestion.suggested_reply)}
+                    className="craft-btn-primary text-xs py-1 px-3 flex items-center gap-1.5 whitespace-nowrap self-end sm:self-auto"
+                  >
+                    <CornerDownLeft className="w-3.5 h-3.5" />
+                    Insertar en Respuesta
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Copilot Diagnosis Card */}
+            {copilotMode === 'diagnosis' && diagnosis && !copilotLoading && (
+              <div className="p-4 rounded-xl bg-surface border border-rose-500/25 space-y-3 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between text-xs text-secondary border-b border-hairline pb-2">
+                  <span className="font-bold text-rose-500 flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5" />
+                    Diagnóstico Técnico y Acciones Recomendadas
+                  </span>
+                </div>
+                <p className="text-xs text-primary leading-relaxed">
+                  {diagnosis.diagnosis}
+                </p>
+
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
+                    Pasos de Verificación:
+                  </span>
+                  {diagnosis.recommended_steps.map((st, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-xs text-primary">
+                      <span className="w-4 h-4 rounded-full bg-rose-500/10 text-rose-500 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+                        {idx + 1}
+                      </span>
+                      <span>{st}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-2 border-t border-hairline">
+                  <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block mb-1">
+                    Casos Históricos Similares Identificados:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {diagnosis.similar_cases.map((sc, idx) => (
+                      <span key={idx} className="text-xs px-2.5 py-1 rounded-md bg-canvas border border-hairline text-secondary">
+                        {sc}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Copilot Summary Card */}
+            {copilotMode === 'summary' && summary && !copilotLoading && (
+              <div className="p-4 rounded-xl bg-surface border border-rose-500/25 space-y-3 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between text-xs text-secondary border-b border-hairline pb-2">
+                  <span className="font-bold text-rose-500 flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5" />
+                    Resumen Ejecutivo del Caso
+                  </span>
+                </div>
+                <p className="text-xs text-primary leading-relaxed">
+                  {summary.summary}
+                </p>
+                <div className="space-y-1.5 pt-1">
+                  {summary.key_points.map((pt, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-xs text-primary">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                      <span>{pt}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {copilotFeedback && (
+              <div className="text-xs text-emerald-500 font-semibold flex items-center gap-1.5 pt-1">
+                <Check className="w-3.5 h-3.5" />
+                {copilotFeedback}
+              </div>
+            )}
           </div>
 
           {/* Activity / Comments Timeline */}

@@ -124,6 +124,35 @@ export interface AIRefineResult {
   analysis: string;
 }
 
+export interface AIFeatureToggle {
+  id: number;
+  help_desk_id: number;
+  feature_name: string;
+  feature_label: string;
+  description: string;
+  role_requester: boolean;
+  role_agent: boolean;
+  role_admin: boolean;
+  is_enabled: boolean;
+}
+
+export interface CopilotSuggestion {
+  suggested_reply: string;
+  explanation: string;
+  source: string;
+}
+
+export interface CopilotDiagnosis {
+  diagnosis: string;
+  recommended_steps: string[];
+  similar_cases: string[];
+}
+
+export interface CopilotSummary {
+  summary: string;
+  key_points: string[];
+}
+
 const API_BASE = '/api';
 
 function getHeaders(token?: string | null): HeadersInit {
@@ -184,35 +213,47 @@ export const api = {
     return res.json();
   },
 
-  async testAIConnection(provider: string, api_key: string, model_name?: string) {
+  async testAIConnection(provider: string, apiKey: string, selectedModel?: string) {
     const res = await fetch(`${API_BASE}/ai/vault/test`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ provider, api_key, model_name }),
+      body: JSON.stringify({
+        provider,
+        api_key: apiKey,
+        selected_model: selectedModel,
+      }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Fallo en la prueba de conexión');
+      throw new Error(err.detail || 'Error al probar conexión');
     }
     return res.json();
   },
 
-  async connectAIKey(provider: string, api_key: string, model_name?: string) {
+  async connectAI(provider: string, apiKey: string, selectedModel?: string) {
     const res = await fetch(`${API_BASE}/ai/vault/connect`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ provider, api_key, model_name }),
+      body: JSON.stringify({
+        provider,
+        api_key: apiKey,
+        selected_model: selectedModel,
+      }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Fallo al vincular la clave de API');
+      throw new Error(err.detail || 'Error al conectar clave');
     }
     return res.json();
+  },
+
+  async connectAIKey(provider: string, apiKey: string, selectedModel?: string) {
+    return this.connectAI(provider, apiKey, selectedModel);
   },
 
   async disconnectAI() {
     const res = await fetch(`${API_BASE}/ai/vault/disconnect`, {
-      method: 'DELETE',
+      method: 'POST',
       headers: getHeaders(),
     });
     if (!res.ok) throw new Error('Error al desconectar IA');
@@ -224,7 +265,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/desks`, {
       headers: getHeaders(),
     });
-    if (!res.ok) throw new Error('Error al obtener mesas de ayuda');
+    if (!res.ok) throw new Error('Error al consultar mesas de ayuda');
     return res.json();
   },
 
@@ -265,11 +306,19 @@ export const api = {
     return res.json();
   },
 
-  // Tickets (Sprint 2)
-  async getTickets(slug: string, statusFilter?: string, categoryId?: number): Promise<TicketItem[]> {
+  // Tickets
+  async getTickets(
+    slug: string,
+    statusFilter?: string,
+    categoryId?: number,
+    priorityId?: number,
+    slaFilter?: string
+  ): Promise<TicketItem[]> {
     const params = new URLSearchParams();
     if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
     if (categoryId) params.append('category_id', categoryId.toString());
+    if (priorityId) params.append('priority_id', priorityId.toString());
+    if (slaFilter && slaFilter !== 'all') params.append('sla_filter', slaFilter);
 
     const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`${API_BASE}/desks/${slug}/tickets${qs}`, {
@@ -315,6 +364,16 @@ export const api = {
     return res.json();
   },
 
+  async assignTicket(slug: string, ticketCode: string, assignee_id: number): Promise<TicketItem> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/tickets/${ticketCode}/assign`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ assignee_id }),
+    });
+    if (!res.ok) throw new Error('Error al asignar ticket');
+    return res.json();
+  },
+
   async addTicketComment(slug: string, ticketCode: string, message: string, is_internal = false): Promise<TicketComment> {
     const res = await fetch(`${API_BASE}/desks/${slug}/tickets/${ticketCode}/comments`, {
       method: 'POST',
@@ -325,12 +384,12 @@ export const api = {
     return res.json();
   },
 
-  // Context & AI Retrospective (Sprint 2)
+  // Context & AI Retrospective
   async getDeskContext(slug: string): Promise<HelpDeskContextData> {
     const res = await fetch(`${API_BASE}/desks/${slug}/context`, {
       headers: getHeaders(),
     });
-    if (!res.ok) throw new Error('Error al consultar el Help Desk Context');
+    if (!res.ok) throw new Error('Error al consultar la memoria de soporte');
     return res.json();
   },
 
@@ -340,7 +399,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify({ content }),
     });
-    if (!res.ok) throw new Error('Error al actualizar la memoria del Help Desk');
+    if (!res.ok) throw new Error('Error al actualizar la memoria de soporte');
     return res.json();
   },
 
@@ -352,7 +411,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error en la ingesta retrospectiva');
+      throw new Error(err.detail || 'Error en la síntesis de casos');
     }
     return res.json();
   },
@@ -365,7 +424,69 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error en el asistente de refinamiento IA');
+      throw new Error(err.detail || 'Error en el asistente de refinamiento');
+    }
+    return res.json();
+  },
+
+  // Governance & AI Toggles (Sprint 3)
+  async getAIToggles(slug: string): Promise<AIFeatureToggle[]> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/ai/toggles`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al consultar gobierno de IA');
+    return res.json();
+  },
+
+  async updateAIToggles(slug: string, toggles: {
+    feature_name: string;
+    role_requester?: boolean;
+    role_agent?: boolean;
+    role_admin?: boolean;
+    is_enabled?: boolean;
+  }[]): Promise<AIFeatureToggle[]> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/ai/toggles`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ toggles }),
+    });
+    if (!res.ok) throw new Error('Error al actualizar gobierno de IA');
+    return res.json();
+  },
+
+  // AI Copilot Endpoints (Sprint 3)
+  async getCopilotSuggestedReply(slug: string, ticketCode: string): Promise<CopilotSuggestion> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/tickets/${ticketCode}/copilot/suggest-reply`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al generar sugerencia de respuesta');
+    }
+    return res.json();
+  },
+
+  async getCopilotDiagnosis(slug: string, ticketCode: string): Promise<CopilotDiagnosis> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/tickets/${ticketCode}/copilot/diagnose`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al obtener diagnóstico técnico');
+    }
+    return res.json();
+  },
+
+  async getCopilotSummary(slug: string, ticketCode: string): Promise<CopilotSummary> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/tickets/${ticketCode}/copilot/summary`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al generar resumen ejecutivo');
     }
     return res.json();
   },

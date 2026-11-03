@@ -112,6 +112,7 @@ export const App: React.FC = () => {
             <WorkspaceView
               slug={selectedDeskSlug}
               aiStatus={aiStatus}
+              currentUser={user}
               onBackToDashboard={() => setSelectedDeskSlug(null)}
             />
           ) : (

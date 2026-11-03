@@ -4,11 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import (
-    User, HelpDesk, HelpDeskMember, Category, Priority, Ticket, TicketComment
+    User, HelpDesk, HelpDeskMember, Category, Priority, Ticket, TicketComment, HelpDeskContext
 )
 from app.schemas import (
     TicketCreate, TicketResponse, TicketDetailResponse,
-    TicketStatusUpdate, TicketCommentCreate, TicketCommentResponse
+    TicketStatusUpdate, TicketCommentCreate, TicketCommentResponse,
+    TicketAssignRequest
 )
 from app.auth import get_current_user
 
@@ -120,6 +121,8 @@ def list_tickets(
     slug: str,
     status_filter: Optional[str] = Query(None, alias="status"),
     category_id: Optional[int] = Query(None),
+    priority_id: Optional[int] = Query(None),
+    sla_filter: Optional[str] = Query(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -130,10 +133,34 @@ def list_tickets(
         query = query.filter(Ticket.status == status_filter)
     if category_id:
         query = query.filter(Ticket.category_id == category_id)
+    if priority_id:
+        query = query.filter(Ticket.priority_id == priority_id)
 
     # Order newest first
     tickets = query.order_by(Ticket.created_at.desc()).all()
-    return [map_ticket_response(t, db) for t in tickets]
+    mapped = [map_ticket_response(t, db) for t in tickets]
+
+    # Optional SLA filter
+    if sla_filter and sla_filter != "all":
+        now = datetime.datetime.utcnow()
+        filtered = []
+        for t in mapped:
+            if t.status in ["resolved", "closed"]:
+                if sla_filter == "on_time":
+                    filtered.append(t)
+                continue
+
+            if t.sla_due_at:
+                diff_sec = (t.sla_due_at - now).total_seconds()
+                if sla_filter == "expired" and diff_sec < 0:
+                    filtered.append(t)
+                elif sla_filter == "at_risk" and 0 <= diff_sec <= 4 * 3600:
+                    filtered.append(t)
+                elif sla_filter == "on_time" and diff_sec > 4 * 3600:
+                    filtered.append(t)
+        return filtered
+
+    return mapped
 
 @router.get("/{ticket_code}", response_model=TicketDetailResponse)
 def get_ticket_detail(
@@ -194,7 +221,6 @@ def update_ticket_status(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
 
-    old_status = ticket.status
     ticket.status = payload.status
 
     if payload.status in ["resolved", "closed"] and not ticket.resolved_at:
@@ -203,6 +229,7 @@ def update_ticket_status(
         ticket.resolved_at = None
 
     # If diagnostic note provided, record as internal resolution comment
+    # and dynamic learning in HelpDeskContext (Sprint 3 requirement)
     if payload.diagnostic:
         diag_comment = TicketComment(
             ticket_id=ticket.id,
@@ -213,6 +240,60 @@ def update_ticket_status(
         )
         db.add(diag_comment)
 
+        # Dynamic Learning Ingestion
+        category = db.query(Category).filter(Category.id == ticket.category_id).first()
+        ctx = db.query(HelpDeskContext).filter(HelpDeskContext.help_desk_id == desk.id).first()
+        if not ctx:
+            ctx = HelpDeskContext(
+                help_desk_id=desk.id,
+                content=f"# Memoria y Contexto: {desk.name}\n\nEspacio fundacional inicial.",
+                version=1
+            )
+            db.add(ctx)
+
+        learning_entry = (
+            f"\n\n### ✦ Caso Resuelto [{ticket.ticket_code}]: {ticket.title}\n"
+            f"- **Categoría:** {category.name if category else 'General'}\n"
+            f"- **Fecha:** {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC\n"
+            f"- **Diagnóstico y Solución:** {payload.diagnostic.strip()}"
+        )
+        ctx.content += learning_entry
+        ctx.version += 1
+        ctx.updated_at = datetime.datetime.utcnow()
+
+    db.commit()
+    db.refresh(ticket)
+    return map_ticket_response(ticket, db)
+
+@router.patch("/{ticket_code}/assign", response_model=TicketResponse)
+def assign_ticket(
+    slug: str,
+    ticket_code: str,
+    payload: TicketAssignRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    desk, member = get_membership(slug, current_user.id, db)
+    ticket = db.query(Ticket).filter(
+        Ticket.help_desk_id == desk.id,
+        Ticket.ticket_code == ticket_code
+    ).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    assignee = db.query(User).filter(User.id == payload.assignee_id).first()
+    if not assignee:
+        raise HTTPException(status_code=404, detail="Usuario asignado no encontrado")
+
+    ticket.assignee_id = assignee.id
+    comment = TicketComment(
+        ticket_id=ticket.id,
+        user_id=current_user.id,
+        message=f"**Asignación de Caso:** Reasignado a {assignee.full_name}.",
+        is_internal=True,
+        created_at=datetime.datetime.utcnow()
+    )
+    db.add(comment)
     db.commit()
     db.refresh(ticket)
     return map_ticket_response(ticket, db)

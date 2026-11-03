@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, Plus, Clock, 
   Bot, Check, BookOpen, 
-  Settings, RefreshCw, AlertCircle, ChevronRight, User, CheckCircle2
+  RefreshCw, AlertCircle, ChevronRight, User, CheckCircle2,
+  ShieldCheck, Eye, Edit3, Sliders, CheckSquare, Square
 } from 'lucide-react';
 import { 
   api, HelpDeskDetails, TicketItem, 
-  HelpDeskContextData, AIStatus 
+  HelpDeskContextData, AIStatus, AIFeatureToggle, User as UserModel
 } from '../api';
 import { TicketCreateModal } from './TicketCreateModal';
 import { TicketDetailModal } from './TicketDetailModal';
@@ -15,22 +16,26 @@ import { RetrospectiveIngestionModal } from './RetrospectiveIngestionModal';
 interface WorkspaceViewProps {
   slug: string;
   aiStatus?: AIStatus | null;
+  currentUser?: UserModel | null;
   onBackToDashboard: () => void;
 }
 
 export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   slug,
   aiStatus: _aiStatus,
+  currentUser,
   onBackToDashboard,
 }) => {
   const [desk, setDesk] = useState<HelpDeskDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'tickets' | 'context' | 'settings'>('tickets');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'context' | 'governance'>('tickets');
 
-  // Tickets state
+  // Tickets state & filters (Sprint 3: Advanced Agent Filters)
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [catFilter, setCatFilter] = useState<number | undefined>(undefined);
+  const [priorityFilter, setPriorityFilter] = useState<number | undefined>(undefined);
+  const [slaFilter, setSlaFilter] = useState<string>('all');
   const [selectedTicketCode, setSelectedTicketCode] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -39,13 +44,20 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   const [contextContent, setContextContent] = useState('');
   const [savingContext, setSavingContext] = useState(false);
   const [contextSaved, setContextSaved] = useState(false);
+  const [memoryViewMode, setMemoryViewMode] = useState<'editor' | 'preview'>('editor');
   const [showIngestModal, setShowIngestModal] = useState(false);
+
+  // Sprint 3: Governance & AI Feature Toggles state
+  const [toggles, setToggles] = useState<AIFeatureToggle[]>([]);
+  const [loadingToggles, setLoadingToggles] = useState(false);
+  const [savingToggles, setSavingToggles] = useState(false);
+  const [togglesSavedFeedback, setTogglesSavedFeedback] = useState(false);
 
   const fetchDeskAndTickets = async () => {
     try {
       const deskData = await api.getDeskDetails(slug);
       setDesk(deskData);
-      const ticketsData = await api.getTickets(slug, statusFilter, catFilter);
+      const ticketsData = await api.getTickets(slug, statusFilter, catFilter, priorityFilter, slaFilter);
       setTickets(ticketsData);
     } catch (err: any) {
       console.error(err);
@@ -64,13 +76,27 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
     }
   };
 
+  const fetchToggles = async () => {
+    setLoadingToggles(true);
+    try {
+      const data = await api.getAIToggles(slug);
+      setToggles(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingToggles(false);
+    }
+  };
+
   useEffect(() => {
     fetchDeskAndTickets();
-  }, [slug, statusFilter, catFilter]);
+  }, [slug, statusFilter, catFilter, priorityFilter, slaFilter]);
 
   useEffect(() => {
     if (activeTab === 'context') {
       fetchContext();
+    } else if (activeTab === 'governance') {
+      fetchToggles();
     }
   }, [activeTab, slug]);
 
@@ -87,6 +113,37 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
       setSavingContext(false);
     }
   };
+
+  const handleToggleChange = async (
+    featureName: string, 
+    field: 'is_enabled' | 'role_requester' | 'role_agent' | 'role_admin'
+  ) => {
+    const updatedList = toggles.map((t) => {
+      if (t.feature_name === featureName) {
+        return { ...t, [field]: !t[field] };
+      }
+      return t;
+    });
+    setToggles(updatedList);
+
+    setSavingToggles(true);
+    try {
+      const saved = await api.updateAIToggles(slug, updatedList);
+      setToggles(saved);
+      setTogglesSavedFeedback(true);
+      setTimeout(() => setTogglesSavedFeedback(false), 2500);
+    } catch (err: any) {
+      alert(err.message);
+      fetchToggles();
+    } finally {
+      setSavingToggles(false);
+    }
+  };
+
+  // Metrics calculation
+  const totalCount = tickets.length;
+  const openCount = tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length;
+  const resolvedCount = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
 
   if (loading) {
     return (
@@ -174,53 +231,104 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
         <button
           type="button"
-          onClick={() => setActiveTab('settings')}
+          onClick={() => setActiveTab('governance')}
           className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 ${
-            activeTab === 'settings'
+            activeTab === 'governance'
               ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
               : 'text-secondary hover:text-primary hover:bg-surface'
           }`}
         >
-          <Settings className="w-3.5 h-3.5" />
-          Configuración & SLAs
+          <Sliders className="w-3.5 h-3.5" />
+          Gobernanza & SLAs
         </button>
       </div>
 
-      {/* Tab 1: Tickets List */}
+      {/* Tab 1: Agent Tickets Console with Multi-Faceted Filters & Metrics */}
       {activeTab === 'tickets' && (
-        <div className="space-y-5">
-          {/* Controls Bar */}
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-            {/* Status filters */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-              {[
-                { id: 'all', label: 'Todos' },
-                { id: 'open', label: 'Abiertos' },
-                { id: 'in_progress', label: 'En Progreso' },
-                { id: 'waiting', label: 'En Espera' },
-                { id: 'resolved', label: 'Resueltos' },
-              ].map((filter) => (
-                <button
-                  key={filter.id}
-                  type="button"
-                  onClick={() => setStatusFilter(filter.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all duration-150 whitespace-nowrap ${
-                    statusFilter === filter.id
-                      ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 amoled:bg-rose-500 amoled:text-white shadow-xs scale-[1.02]'
-                      : 'bg-surface border border-hairline text-secondary hover:text-primary'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
+        <div className="space-y-6">
+          {/* Workload Metrics Banner for Support Team */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+            <div className="rounded-xl border border-hairline bg-surface p-4 space-y-1 shadow-xs">
+              <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
+                Total de Casos
+              </span>
+              <span className="text-xl font-extrabold text-primary block">
+                {totalCount}
+              </span>
             </div>
 
-            {/* Category Filter & New Ticket button */}
-            <div className="flex items-center gap-2.5">
+            <div className="rounded-xl border border-hairline bg-surface p-4 space-y-1 shadow-xs">
+              <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
+                En Atención
+              </span>
+              <span className="text-xl font-extrabold text-rose-500 block">
+                {openCount}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-hairline bg-surface p-4 space-y-1 shadow-xs">
+              <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
+                Casos Resueltos
+              </span>
+              <span className="text-xl font-extrabold text-emerald-500 block">
+                {resolvedCount}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-hairline bg-surface p-4 space-y-1 shadow-xs">
+              <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
+                Cumplimiento SLA
+              </span>
+              <span className="text-xl font-extrabold text-primary block">
+                {totalCount > 0 ? `${Math.round((resolvedCount / totalCount) * 100)}%` : '100%'}
+              </span>
+            </div>
+          </div>
+
+          {/* Controls Bar: Multi-layered Filters */}
+          <div className="p-4 rounded-2xl border border-hairline bg-surface space-y-3.5 shadow-xs">
+            {/* Status filters */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                {[
+                  { id: 'all', label: 'Todos los Estados' },
+                  { id: 'open', label: 'Abiertos' },
+                  { id: 'in_progress', label: 'En Progreso' },
+                  { id: 'waiting', label: 'En Espera' },
+                  { id: 'resolved', label: 'Resueltos' },
+                ].map((filter) => (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    onClick={() => setStatusFilter(filter.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all duration-150 whitespace-nowrap ${
+                      statusFilter === filter.id
+                        ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 amoled:bg-rose-500 amoled:text-white shadow-xs scale-[1.02]'
+                        : 'bg-canvas border border-hairline text-secondary hover:text-primary'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(true)}
+                className="craft-btn-primary text-xs shadow-sm whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Radicar Caso
+              </button>
+            </div>
+
+            {/* SLA and Category dropdowns */}
+            <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-hairline">
+              {/* Category Filter */}
               <select
                 value={catFilter ?? ''}
                 onChange={(e) => setCatFilter(e.target.value ? parseInt(e.target.value) : undefined)}
-                className="craft-input text-xs py-1.5 cursor-pointer"
+                className="craft-input text-xs py-1.5 cursor-pointer max-w-xs"
               >
                 <option value="">Todas las Categorías</option>
                 {desk.categories.map((c) => (
@@ -230,14 +338,31 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 ))}
               </select>
 
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(true)}
-                className="craft-btn-primary text-xs shadow-sm whitespace-nowrap"
+              {/* Priority Filter */}
+              <select
+                value={priorityFilter ?? ''}
+                onChange={(e) => setPriorityFilter(e.target.value ? parseInt(e.target.value) : undefined)}
+                className="craft-input text-xs py-1.5 cursor-pointer max-w-xs"
               >
-                <Plus className="w-3.5 h-3.5" />
-                Nuevo Caso
-              </button>
+                <option value="">Todas las Prioridades</option>
+                {desk.priorities.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.sla_resolution_hours}h)
+                  </option>
+                ))}
+              </select>
+
+              {/* SLA Filter */}
+              <select
+                value={slaFilter}
+                onChange={(e) => setSlaFilter(e.target.value)}
+                className="craft-input text-xs py-1.5 cursor-pointer max-w-xs"
+              >
+                <option value="all">Cualquier Estado de SLA</option>
+                <option value="on_time">A Tiempo (Dentro de SLA)</option>
+                <option value="at_risk">En Riesgo (&lt; 4 horas)</option>
+                <option value="expired">Vencidos (SLA Superado)</option>
+              </select>
             </div>
           </div>
 
@@ -249,7 +374,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               </div>
               <h3 className="text-sm font-bold text-primary">No hay casos registrados con estos filtros</h3>
               <p className="text-xs text-secondary max-w-sm mx-auto">
-                Los casos nuevos que se radiquen aparecerán organizados aquí con su respectivo SLA.
+                Los casos nuevos que se radiquen aparecerán organizados aquí con su respectivo temporizador de SLA.
               </p>
               <button
                 type="button"
@@ -269,7 +394,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   className="rounded-2xl border border-hairline bg-surface p-5 space-y-3 hover:border-rose-500/40 hover:shadow-md hover:-translate-y-0.5 cursor-pointer transition-all duration-200 group flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
                   <div className="space-y-1.5 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs font-bold text-rose-500 px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20">
                         {t.ticket_code}
                       </span>
@@ -279,6 +404,11 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                       <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-canvas border border-hairline text-secondary uppercase tracking-wider">
                         {t.priority_name}
                       </span>
+                      {t.assignee_name && (
+                        <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500">
+                          {t.assignee_name}
+                        </span>
+                      )}
                     </div>
                     <h3 className="text-sm font-bold text-primary group-hover:text-rose-500 transition-colors">
                       {t.title}
@@ -331,7 +461,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         </div>
       )}
 
-      {/* Tab 2: Living Support Memory */}
+      {/* Tab 2: Living Support Memory (Editor & Live Preview) */}
       {activeTab === 'context' && (
         <div className="craft-card space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-hairline">
@@ -341,7 +471,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   <BookOpen className="w-4 h-4" />
                 </div>
                 <h3 className="text-sm font-bold text-primary">
-                  Memoria de Soporte del Equipo
+                  Memoria de Soporte Viva (Help Desk Context)
                 </h3>
                 {contextData && (
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-canvas border border-hairline text-secondary font-semibold">
@@ -350,73 +480,224 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 )}
               </div>
               <p className="text-xs text-secondary mt-1">
-                Conocimiento acumulado de soluciones y políticas de atención. La IA utiliza esta base para formular respuestas y diagnósticos precisos.
+                Base viva de conocimiento y resoluciones. La IA aprende continuamente de cada caso cerrado para mejorar respuestas futuras.
               </p>
             </div>
 
-            {desk.user_role === 'admin' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center bg-canvas p-1 rounded-xl border border-hairline">
+                <button
+                  type="button"
+                  onClick={() => setMemoryViewMode('editor')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    memoryViewMode === 'editor'
+                      ? 'bg-surface text-primary shadow-xs'
+                      : 'text-secondary hover:text-primary'
+                  }`}
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  Editor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMemoryViewMode('preview')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    memoryViewMode === 'preview'
+                      ? 'bg-surface text-primary shadow-xs'
+                      : 'text-secondary hover:text-primary'
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Vista Previa
+                </button>
+              </div>
+
+              {desk.user_role === 'admin' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowIngestModal(true)}
+                    className="craft-btn-secondary text-xs"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-rose-500" />
+                    Re-indexar Casos
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingContext}
+                    onClick={handleSaveContext}
+                    className="craft-btn-primary text-xs font-semibold"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    {savingContext ? 'Guardando...' : contextSaved ? '¡Guardado!' : 'Guardar Memoria'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {memoryViewMode === 'editor' ? (
+            <div className="rounded-2xl border border-hairline bg-canvas p-4 shadow-xs">
+              <textarea
+                rows={16}
+                value={contextContent}
+                readOnly={desk.user_role !== 'admin'}
+                onChange={(e) => setContextContent(e.target.value)}
+                className="craft-input w-full text-xs font-mono leading-relaxed"
+                placeholder="Directrices, políticas y síntesis de casos..."
+              />
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-hairline bg-canvas p-6 shadow-xs prose prose-sm max-w-none text-xs text-primary leading-relaxed whitespace-pre-wrap">
+              {contextContent}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 3: Governance & AI Feature Toggles (RBAC Matrix) & SLAs */}
+      {activeTab === 'governance' && (
+        <div className="space-y-6">
+          {/* Bento Card: Matriz de Gobernanza de IA y Control RBAC */}
+          <div className="craft-card space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-hairline">
               <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setShowIngestModal(true)}
-                  className="craft-btn-secondary text-xs"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-rose-500" />
-                  Sintetizar Casos
-                </button>
-                <button
-                  type="button"
-                  disabled={savingContext}
-                  onClick={handleSaveContext}
-                  className="craft-btn-primary text-xs font-semibold"
-                >
+                <div className="w-8 h-8 rounded-xl bg-canvas border border-hairline flex items-center justify-center text-rose-500 shadow-xs">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-primary">
+                    Matriz de Gobernanza de IA y Control por Rol (RBAC)
+                  </h3>
+                  <p className="text-xs text-secondary">
+                    Define qué capacidades de IA están habilitadas y accesibles para cada perfil de usuario en este Help Desk.
+                  </p>
+                </div>
+              </div>
+
+              {togglesSavedFeedback && (
+                <span className="text-xs text-emerald-500 font-bold flex items-center gap-1 self-start sm:self-auto animate-in fade-in duration-150">
                   <Check className="w-3.5 h-3.5" />
-                  {savingContext ? 'Guardando...' : contextSaved ? '¡Guardado!' : 'Guardar Memoria'}
-                </button>
+                  ¡Configuración RBAC guardada!
+                </span>
+              )}
+            </div>
+
+            {loadingToggles ? (
+              <div className="text-center py-8 text-xs text-secondary">
+                Cargando matriz de gobierno...
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-hairline text-secondary text-[11px] uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Funcionalidad de IA</th>
+                      <th className="py-2.5 px-3 text-center">Estado Global</th>
+                      <th className="py-2.5 px-3 text-center">Solicitante</th>
+                      <th className="py-2.5 px-3 text-center">Agente</th>
+                      <th className="py-2.5 px-3 text-center">Administrador</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-hairline">
+                    {toggles.map((t) => (
+                      <tr key={t.id} className="hover:bg-canvas/50 transition-colors">
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-primary block">{t.feature_label}</span>
+                          <span className="text-[11px] text-secondary">{t.description}</span>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <button
+                            type="button"
+                            disabled={desk.user_role !== 'admin' || savingToggles}
+                            onClick={() => handleToggleChange(t.feature_name, 'is_enabled')}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-all ${
+                              t.is_enabled
+                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/25'
+                                : 'bg-surface text-secondary border border-hairline'
+                            }`}
+                          >
+                            {t.is_enabled ? 'Activo' : 'Pausado'}
+                          </button>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <button
+                            type="button"
+                            disabled={desk.user_role !== 'admin' || savingToggles}
+                            onClick={() => handleToggleChange(t.feature_name, 'role_requester')}
+                            className="cursor-pointer text-secondary hover:text-primary"
+                          >
+                            {t.role_requester ? (
+                              <CheckSquare className="w-4 h-4 mx-auto text-rose-500" />
+                            ) : (
+                              <Square className="w-4 h-4 mx-auto text-secondary/40" />
+                            )}
+                          </button>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <button
+                            type="button"
+                            disabled={desk.user_role !== 'admin' || savingToggles}
+                            onClick={() => handleToggleChange(t.feature_name, 'role_agent')}
+                            className="cursor-pointer text-secondary hover:text-primary"
+                          >
+                            {t.role_agent ? (
+                              <CheckSquare className="w-4 h-4 mx-auto text-rose-500" />
+                            ) : (
+                              <Square className="w-4 h-4 mx-auto text-secondary/40" />
+                            )}
+                          </button>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <button
+                            type="button"
+                            disabled={desk.user_role !== 'admin' || savingToggles}
+                            onClick={() => handleToggleChange(t.feature_name, 'role_admin')}
+                            className="cursor-pointer text-secondary hover:text-primary"
+                          >
+                            {t.role_admin ? (
+                              <CheckSquare className="w-4 h-4 mx-auto text-rose-500" />
+                            ) : (
+                              <Square className="w-4 h-4 mx-auto text-secondary/40" />
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
 
-          <div className="rounded-2xl border border-hairline bg-canvas p-5 shadow-xs">
-            <textarea
-              rows={16}
-              value={contextContent}
-              readOnly={desk.user_role !== 'admin'}
-              onChange={(e) => setContextContent(e.target.value)}
-              className="craft-input w-full text-xs leading-relaxed"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Tab 3: Settings & SLAs */}
-      {activeTab === 'settings' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Categories Card */}
-          <div className="craft-card space-y-4">
-            <h3 className="text-sm font-bold text-primary">Catálogo de Categorías</h3>
-            <div className="space-y-2.5">
-              {desk.categories.map((c) => (
-                <div key={c.id} className="p-3.5 rounded-xl bg-canvas border border-hairline text-xs flex justify-between shadow-xs">
-                  <span className="font-bold text-primary">{c.name}</span>
-                  <span className="text-secondary">{c.description}</span>
-                </div>
-              ))}
+          {/* Catalog & SLA Policies Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Categories Card */}
+            <div className="craft-card space-y-4">
+              <h3 className="text-sm font-bold text-primary">Catálogo de Categorías</h3>
+              <div className="space-y-2.5">
+                {desk.categories.map((c) => (
+                  <div key={c.id} className="p-3.5 rounded-xl bg-canvas border border-hairline text-xs flex justify-between shadow-xs">
+                    <span className="font-bold text-primary">{c.name}</span>
+                    <span className="text-secondary">{c.description}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* SLA Policies Card */}
-          <div className="craft-card space-y-4">
-            <h3 className="text-sm font-bold text-primary">Matriz de Prioridades y SLAs</h3>
-            <div className="space-y-2.5">
-              {desk.priorities.map((p) => (
-                <div key={p.id} className="p-3.5 rounded-xl bg-canvas border border-hairline text-xs flex justify-between shadow-xs">
-                  <span className="font-bold text-primary">{p.name} (Nivel {p.level})</span>
-                  <span className="text-secondary font-medium">
-                    Respuesta: <strong className="text-primary">{p.sla_response_hours}h</strong> | Solución: <strong className="text-primary">{p.sla_resolution_hours}h</strong>
-                  </span>
-                </div>
-              ))}
+            {/* SLA Policies Card */}
+            <div className="craft-card space-y-4">
+              <h3 className="text-sm font-bold text-primary">Matriz de Prioridades y SLAs</h3>
+              <div className="space-y-2.5">
+                {desk.priorities.map((p) => (
+                  <div key={p.id} className="p-3.5 rounded-xl bg-canvas border border-hairline text-xs flex justify-between shadow-xs">
+                    <span className="font-bold text-primary">{p.name} (Nivel {p.level})</span>
+                    <span className="text-secondary font-medium">
+                      Respuesta: <strong className="text-primary">{p.sla_response_hours}h</strong> | Solución: <strong className="text-primary">{p.sla_resolution_hours}h</strong>
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -441,6 +722,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         <TicketDetailModal
           slug={slug}
           ticketCode={selectedTicketCode}
+          currentUser={currentUser ? { id: currentUser.id, full_name: currentUser.full_name } : undefined}
           onClose={() => setSelectedTicketCode(null)}
           onTicketUpdated={() => fetchDeskAndTickets()}
         />
