@@ -552,8 +552,9 @@ def update_informe_pruebas():
 # 4. ACTUALIZAR: CF - Reporte_Errores_SW.xlsx
 # ==============================================================================
 def update_reporte_errores():
-    path = os.path.join(base_output, 'CF - Reporte_Errores_SW.xlsx')
-    wb = openpyxl.load_workbook(path)
+    src = os.path.join(base_input, 'CF - Reporte_Errores_SW.xlsx')
+    dst = os.path.join(base_output, 'CF - Reporte_Errores_SW.xlsx')
+    wb = openpyxl.load_workbook(src)
     ws = wb.active
 
     nuevos_errores = [
@@ -562,13 +563,16 @@ def update_reporte_errores():
         ("DEF-06", "Botones secundarios sin adopcion de la paleta Duo-Tone", "Frontend / UX", "Media", "Cerrado / Resuelto", "Danna Palencia & Jairo Molano", "03/11/2026", "Se implemento regla Duo-Tone: Negro en Modo Claro y Blanco en Modo Oscuro/AMOLED con escala hover 1.02."),
         ("DEF-07", "Presencia de fuentes monoespaciadas en la interfaz de usuario", "Frontend / Tipografia", "Baja", "Cerrado / Resuelto", "Danna Palencia & Jairo Molano", "03/11/2026", "Se unifico toda la interfaz a Google Sans y fuente cursiva delgada para acentos editoriales en landing page."),
         ("DEF-08", "Menciones de caracter universitario en footer y placeholders", "Copywriting / Profesional", "Alta", "Cerrado / Resuelto", "Danna Palencia & Jairo Molano", "03/11/2026", "Se eliminaron todas las referencias academicas y nombres personales en placeholders, elevando el software a producto comercial."),
-        ("DEF-09", "Cards de mesas y tickets planas sin estetica Bento Grid", "Frontend / UI", "Media", "Cerrado / Resuelto", "Danna Palencia & Jairo Molano", "03/11/2026", "Se rediseñaron los contenedores con bordes sutiles, esquinas rounded-2xl y sombras multicapa.")
+        ("DEF-09", "Cards de mesas y tickets planas sin estetica Bento Grid", "Frontend / UI", "Media", "Cerrado / Resuelto", "Danna Palencia & Jairo Molano", "03/11/2026", "Se rediseñaron los contenedores con bordes sutiles, esquinas rounded-2xl y sombras multicapa."),
+        ("DEF-10", "Recuadros perimetrales cerrados involuntarios en contenedores (border-b / border-t / border-l)", "Frontend / CSS", "Alta", "Cerrado / Resuelto", "Danna Palencia & Jairo Molano", "03/11/2026", "Se elimino border-width: 1px de .border-hairline y se definio borderColor.hairline en Tailwind, asegurando trazos divisores unidireccionales limpios sin rectangulos involuntarios."),
+        ("DEF-11", "Tipografia secundaria cursiva informal (Caveat) con tamano disminuido y baja elegancia", "Frontend / Tipografia", "Media", "Cerrado / Resuelto", "Danna Palencia & Jairo Molano", "03/11/2026", "Se sustituyo Caveat por Google Font Alex Brush (con fallback Playfair Display), escalando la presencia y elegancia caligrafica en el hero, pill y footer."),
+        ("DEF-12", "Color primario Duo-Tone (Salmon/Fucsia Claro) con palidez excesiva en pantalla", "Frontend / Paleta Duo-Tone", "Media", "Cerrado / Resuelto", "Danna Palencia & Jairo Molano", "03/11/2026", "Se calibro a #e11d48 (Rose 600) para modo claro y se fijo #f43f5e para modo oscuro/AMOLED, eliminando la sensacion palida y conservando la estetica Duo-Tone.")
     ]
 
     for err in nuevos_errores:
         ws.append(err)
 
-    wb.save(path)
+    wb.save(dst)
     print("-> Actualizado exitosamente: CF - Reporte_Errores_SW.xlsx")
 
 

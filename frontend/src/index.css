@@ -11,10 +11,10 @@
     --border-strong: #cbd5e1;
     --text-primary: #0f172a;
     --text-secondary: #64748b;
-    --accent: #f43f5e;
-    --accent-hover: #e11d48;
-    --accent-subtle: rgba(244, 63, 94, 0.08);
-    --accent-border: rgba(244, 63, 94, 0.25);
+    --accent: #e11d48;
+    --accent-hover: #be123c;
+    --accent-subtle: rgba(225, 29, 72, 0.08);
+    --accent-border: rgba(225, 29, 72, 0.25);
 
     /* Secondary Duo-Tone: Negro en modo claro */
     --secondary-bg: #09090b;
@@ -32,10 +32,10 @@
     --border-strong: rgba(255, 255, 255, 0.16);
     --text-primary: #f4f4f5;
     --text-secondary: #a1a1aa;
-    --accent: #fb7185;
+    --accent: #f43f5e;
     --accent-hover: #f43f5e;
-    --accent-subtle: rgba(251, 113, 133, 0.12);
-    --accent-border: rgba(251, 113, 133, 0.28);
+    --accent-subtle: rgba(244, 63, 94, 0.12);
+    --accent-border: rgba(244, 63, 94, 0.28);
 
     /* Secondary Duo-Tone: Blanco en modo oscuro */
     --secondary-bg: #ffffff;
@@ -52,10 +52,10 @@
     --border-strong: #38383e;
     --text-primary: #ffffff;
     --text-secondary: #9e9ea7;
-    --accent: #ff6b8b;
+    --accent: #f43f5e;
     --accent-hover: #fb7185;
-    --accent-subtle: rgba(255, 107, 139, 0.14);
-    --accent-border: rgba(255, 107, 139, 0.32);
+    --accent-subtle: rgba(244, 63, 94, 0.14);
+    --accent-border: rgba(244, 63, 94, 0.32);
 
     /* Secondary Duo-Tone: Blanco en modo amoled */
     --secondary-bg: #ffffff;
@@ -77,12 +77,10 @@
 @layer components {
   /* Precision hairline borders & surfaces */
   .border-hairline {
-    border-width: 1px;
     border-color: var(--border-subtle);
   }
 
   .border-strong {
-    border-width: 1px;
     border-color: var(--border-strong);
   }
 
@@ -162,14 +160,14 @@
     justify-content: center;
     gap: 0.5rem;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(244, 63, 94, 0.2);
+    box-shadow: 0 1px 3px rgba(225, 29, 72, 0.2);
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .craft-btn-primary:hover {
     background-color: var(--accent-hover);
     transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.35);
+    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
   }
 
   .craft-btn-primary:active {

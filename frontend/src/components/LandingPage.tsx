@@ -46,7 +46,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-xs border border-hairline bg-surface mb-6 shadow-sm hover:scale-[1.02] transition-transform cursor-pointer">
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
             <span className="text-secondary font-medium">Plataforma Inteligente de Servicio al Cliente</span>
-            <span className="text-rose-500 font-cursive text-sm font-semibold tracking-wide">
+            <span className="text-rose-500 font-cursive text-base font-normal tracking-wide">
               simplicidad y agilidad
             </span>
           </div>
@@ -54,7 +54,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
           {/* Heading - Clean & High Precision */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary max-w-4xl mx-auto leading-[1.15]">
             Mesas de ayuda inteligentes diseñadas para{' '}
-            <span className="relative inline-block text-rose-500 font-cursive text-5xl sm:text-6xl lg:text-7xl font-normal px-1">
+            <span className="relative inline-block text-rose-500 font-cursive text-5xl sm:text-6xl lg:text-7xl font-normal px-1.5">
               equipos exigentes
             </span>
           </h1>
@@ -307,7 +307,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenAuth }) => {
 
           <div className="mt-8 pt-6 border-t border-hairline flex flex-col sm:flex-row items-center justify-between text-xs text-secondary gap-3">
             <p>© 2026 CaseFlow Inc. Todos los derechos reservados.</p>
-            <p className="text-rose-500 font-cursive text-base">
+            <p className="text-rose-500 font-cursive text-lg font-normal">
               Diseñado con precisión para equipos de soporte ágiles.
             </p>
           </div>
