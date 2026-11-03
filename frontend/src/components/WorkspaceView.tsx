@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ArrowLeft, Plus, Clock, 
+  ArrowLeft, Plus, 
   Bot, Check, BookOpen, 
-  RefreshCw, AlertCircle, ChevronRight, User, CheckCircle2,
-  ShieldCheck, Eye, Edit3, Sliders, CheckSquare, Square
+  RefreshCw, AlertCircle, ChevronRight, CheckCircle2,
+  ShieldCheck, Eye, EyeOff, Sliders, CheckSquare, Square,
+  Users, Link2, Copy, Trash2, AlertTriangle, Key, Sparkles, Loader2,
+  UserCheck, UserX
 } from 'lucide-react';
 import { 
   api, HelpDeskDetails, TicketItem, 
-  HelpDeskContextData, AIStatus, AIFeatureToggle, User as UserModel
+  AIFeatureToggle, User as UserModel,
+  HelpDeskMemberItem, HelpDeskInvitationItem,
+  AIStatus
 } from '../api';
 import { TicketCreateModal } from './TicketCreateModal';
 import { TicketDetailModal } from './TicketDetailModal';
@@ -15,22 +19,20 @@ import { RetrospectiveIngestionModal } from './RetrospectiveIngestionModal';
 
 interface WorkspaceViewProps {
   slug: string;
-  aiStatus?: AIStatus | null;
   currentUser?: UserModel | null;
   onBackToDashboard: () => void;
 }
 
 export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   slug,
-  aiStatus: _aiStatus,
   currentUser,
   onBackToDashboard,
 }) => {
   const [desk, setDesk] = useState<HelpDeskDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'tickets' | 'context' | 'governance'>('tickets');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'members' | 'ai' | 'context' | 'governance'>('tickets');
 
-  // Tickets state & filters (Sprint 3: Advanced Agent Filters)
+  // Tickets state & filters
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [catFilter, setCatFilter] = useState<number | undefined>(undefined);
@@ -39,17 +41,36 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   const [selectedTicketCode, setSelectedTicketCode] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  // Members & Invitations state (Sprint 4)
+  const [members, setMembers] = useState<HelpDeskMemberItem[]>([]);
+  const [invitations, setInvitations] = useState<HelpDeskInvitationItem[]>([]);
+  const [memberSearch, setMemberSearch] = useState('');
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [showCreateInviteModal, setShowCreateInviteModal] = useState(false);
+  const [inviteRole, setInviteRole] = useState<'requester' | 'agent' | 'admin'>('requester');
+  const [inviteLabel, setInviteLabel] = useState('');
+  const [inviteMaxUses, setInviteMaxUses] = useState<number | undefined>(undefined);
+  const [inviteExpiresDays, setInviteExpiresDays] = useState<number | undefined>(7);
+  const [creatingInvite, setCreatingInvite] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // Desk-Specific AI Vault state (Sprint 4)
+  const [deskAIStatus, setDeskAIStatus] = useState<AIStatus | null>(null);
+  const [aiProvider, setAIProvider] = useState<'gemini' | 'openai' | 'claude'>('gemini');
+  const [aiApiKey, setAIApiKey] = useState('');
+  const [showAIKey, setShowAIKey] = useState(false);
+  const [selectedAIModel, setSelectedAIModel] = useState('gemini-2.0-flash');
+  const [testingDeskAI, setTestingDeskAI] = useState(false);
+  const [deskAIMsg, setDeskAIMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   // Context state
-  const [contextData, setContextData] = useState<HelpDeskContextData | null>(null);
   const [contextContent, setContextContent] = useState('');
   const [savingContext, setSavingContext] = useState(false);
   const [contextSaved, setContextSaved] = useState(false);
-  const [memoryViewMode, setMemoryViewMode] = useState<'editor' | 'preview'>('editor');
   const [showIngestModal, setShowIngestModal] = useState(false);
 
-  // Sprint 3: Governance & AI Feature Toggles state
+  // Governance & AI Feature Toggles state
   const [toggles, setToggles] = useState<AIFeatureToggle[]>([]);
-  const [loadingToggles, setLoadingToggles] = useState(false);
   const [savingToggles, setSavingToggles] = useState(false);
   const [togglesSavedFeedback, setTogglesSavedFeedback] = useState(false);
 
@@ -66,10 +87,40 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
     }
   };
 
+  const fetchMembersAndInvitations = async () => {
+    setLoadingMembers(true);
+    try {
+      const membersData = await api.getDeskMembers(slug);
+      setMembers(membersData);
+      if (desk?.user_role === 'admin') {
+        const invData = await api.getDeskInvitations(slug);
+        setInvitations(invData);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  const fetchDeskAI = async () => {
+    try {
+      const statusData = await api.getDeskAIStatus(slug);
+      setDeskAIStatus(statusData);
+      if (statusData.is_connected && statusData.provider) {
+        setAIProvider(statusData.provider);
+        if (statusData.model_name) {
+          setSelectedAIModel(statusData.model_name);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const fetchContext = async () => {
     try {
       const data = await api.getDeskContext(slug);
-      setContextData(data);
       setContextContent(data.content);
     } catch (err) {
       console.error(err);
@@ -77,14 +128,11 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   };
 
   const fetchToggles = async () => {
-    setLoadingToggles(true);
     try {
       const data = await api.getAIToggles(slug);
       setToggles(data);
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoadingToggles(false);
     }
   };
 
@@ -93,7 +141,11 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   }, [slug, statusFilter, catFilter, priorityFilter, slaFilter]);
 
   useEffect(() => {
-    if (activeTab === 'context') {
+    if (activeTab === 'members') {
+      fetchMembersAndInvitations();
+    } else if (activeTab === 'ai') {
+      fetchDeskAI();
+    } else if (activeTab === 'context') {
       fetchContext();
     } else if (activeTab === 'governance') {
       fetchToggles();
@@ -103,8 +155,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   const handleSaveContext = async () => {
     setSavingContext(true);
     try {
-      const updated = await api.updateDeskContext(slug, contextContent);
-      setContextData(updated);
+      await api.updateDeskContext(slug, contextContent);
       setContextSaved(true);
       setTimeout(() => setContextSaved(false), 3000);
     } catch (err: any) {
@@ -140,10 +191,132 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
     }
   };
 
+  // Member Management handlers
+  const handleUpdateMemberRole = async (userId: number, newRole: string) => {
+    try {
+      await api.updateDeskMember(slug, userId, { role: newRole });
+      fetchMembersAndInvitations();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleToggleMemberActive = async (userId: number, currentActive: boolean) => {
+    const action = currentActive ? 'desactivar' : 'reactivar';
+    if (!confirm(`¿Estás seguro de que deseas ${action} a este usuario en la mesa de ayuda?`)) return;
+    try {
+      await api.updateDeskMember(slug, userId, { is_active: !currentActive });
+      fetchMembersAndInvitations();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleRemoveMember = async (userId: number, name: string) => {
+    if (!confirm(`¿Deseas eliminar a ${name} de esta mesa de ayuda? Tendrá que volver a unirse mediante un enlace.`)) return;
+    try {
+      await api.removeDeskMember(slug, userId);
+      fetchMembersAndInvitations();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  // Invitation handlers
+  const handleCreateInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingInvite(true);
+    try {
+      await api.createDeskInvitation(slug, {
+        role: inviteRole,
+        label: inviteLabel.trim() || undefined,
+        max_uses: inviteMaxUses,
+        expires_days: inviteExpiresDays,
+      });
+      setShowCreateInviteModal(false);
+      setInviteLabel('');
+      setInviteMaxUses(undefined);
+      fetchMembersAndInvitations();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setCreatingInvite(false);
+    }
+  };
+
+  const handleCopyInviteLink = (code: string) => {
+    const fullUrl = `${window.location.origin}/?join=${code}`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2500);
+  };
+
+  const handleToggleInvitation = async (invId: number) => {
+    try {
+      await api.toggleDeskInvitation(slug, invId);
+      fetchMembersAndInvitations();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteInvitation = async (invId: number) => {
+    if (!confirm('¿Deseas eliminar permanentemente este enlace de invitación?')) return;
+    try {
+      await api.deleteDeskInvitation(slug, invId);
+      fetchMembersAndInvitations();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  // Desk AI Vault Handlers
+  const handleConnectDeskAI = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiApiKey.trim()) return;
+    setTestingDeskAI(true);
+    setDeskAIMsg(null);
+
+    try {
+      const res = await api.connectDeskAIKey(slug, aiProvider, aiApiKey, selectedAIModel);
+      setDeskAIMsg({
+        type: 'success',
+        text: `Conexión verificada: ${res.latency_ms} ms (${aiProvider.toUpperCase()}) para ${desk?.name}`,
+      });
+      setAIApiKey('');
+      fetchDeskAI();
+      fetchDeskAndTickets();
+    } catch (err: any) {
+      setDeskAIMsg({
+        type: 'error',
+        text: err.message || 'No se pudo validar la clave contra el proveedor.',
+      });
+    } finally {
+      setTestingDeskAI(false);
+    }
+  };
+
+  const handleDisconnectDeskAI = async () => {
+    if (!confirm(`¿Deseas desvincular las credenciales de IA exclusivamente para ${desk?.name}?`)) return;
+    try {
+      await api.disconnectDeskAI(slug);
+      fetchDeskAI();
+      fetchDeskAndTickets();
+      setDeskAIMsg({ type: 'success', text: 'Credenciales desvinculadas de esta mesa de ayuda.' });
+    } catch (err: any) {
+      setDeskAIMsg({ type: 'error', text: err.message });
+    }
+  };
+
   // Metrics calculation
   const totalCount = tickets.length;
   const openCount = tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length;
   const resolvedCount = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
+
+  const filteredMembers = members.filter(m => 
+    m.full_name.toLowerCase().includes(memberSearch.toLowerCase()) ||
+    m.email.toLowerCase().includes(memberSearch.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -166,7 +339,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-7">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-7 animate-fade-in">
       {/* Breadcrumb & Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-hairline">
         <div className="flex items-center gap-3">
@@ -181,13 +354,13 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
           <span className="text-secondary text-xs">/</span>
           <div className="flex items-baseline gap-2">
             <h1 className="text-xl font-extrabold tracking-tight text-primary">{desk.name}</h1>
-            <span className="text-xs text-secondary">/{desk.slug}</span>
+            <span className="text-xs text-secondary font-mono">/{desk.slug}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5">
           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-surface border border-hairline text-secondary uppercase tracking-wider">
-            {desk.user_role}
+            {desk.user_role === 'admin' ? 'Administrador' : (desk.user_role === 'agent' ? 'Soporte / Agente' : 'Usuario / Solicitante')}
           </span>
           <span
             className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border ${
@@ -203,11 +376,11 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
       </div>
 
       {/* Tabs Menu */}
-      <div className="flex items-center gap-2 border-b border-hairline pb-2">
+      <div className="flex items-center gap-2 border-b border-hairline pb-2 overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveTab('tickets')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 ${
+          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 whitespace-nowrap ${
             activeTab === 'tickets'
               ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
               : 'text-secondary hover:text-primary hover:bg-surface'
@@ -218,8 +391,34 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
         <button
           type="button"
+          onClick={() => setActiveTab('members')}
+          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'members'
+              ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
+              : 'text-secondary hover:text-primary hover:bg-surface'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          Usuarios e Invitaciones
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('ai')}
+          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'ai'
+              ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
+              : 'text-secondary hover:text-primary hover:bg-surface'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-rose-300" />
+          Conexión de IA (BYOK)
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('context')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 ${
+          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
             activeTab === 'context'
               ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
               : 'text-secondary hover:text-primary hover:bg-surface'
@@ -232,7 +431,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveTab('governance')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 ${
+          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
             activeTab === 'governance'
               ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
               : 'text-secondary hover:text-primary hover:bg-surface'
@@ -243,10 +442,10 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         </button>
       </div>
 
-      {/* Tab 1: Agent Tickets Console with Multi-Faceted Filters & Metrics */}
+      {/* Tab 1: Tickets Console */}
       {activeTab === 'tickets' && (
-        <div className="space-y-6">
-          {/* Workload Metrics Banner for Support Team */}
+        <div className="space-y-6 animate-fade-in">
+          {/* Workload Metrics Banner */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
             <div className="rounded-xl border border-hairline bg-surface p-4 space-y-1 shadow-xs">
               <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
@@ -287,7 +486,6 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
 
           {/* Controls Bar: Multi-layered Filters */}
           <div className="p-4 rounded-2xl border border-hairline bg-surface space-y-3.5 shadow-xs">
-            {/* Status filters */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
                 {[
@@ -322,9 +520,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               </button>
             </div>
 
-            {/* SLA and Category dropdowns */}
             <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-hairline">
-              {/* Category Filter */}
               <select
                 value={catFilter ?? ''}
                 onChange={(e) => setCatFilter(e.target.value ? parseInt(e.target.value) : undefined)}
@@ -338,7 +534,6 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 ))}
               </select>
 
-              {/* Priority Filter */}
               <select
                 value={priorityFilter ?? ''}
                 onChange={(e) => setPriorityFilter(e.target.value ? parseInt(e.target.value) : undefined)}
@@ -352,107 +547,58 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 ))}
               </select>
 
-              {/* SLA Filter */}
               <select
                 value={slaFilter}
                 onChange={(e) => setSlaFilter(e.target.value)}
                 className="craft-input text-xs py-1.5 cursor-pointer max-w-xs"
               >
-                <option value="all">Cualquier Estado de SLA</option>
-                <option value="on_time">A Tiempo (Dentro de SLA)</option>
-                <option value="at_risk">En Riesgo (&lt; 4 horas)</option>
-                <option value="expired">Vencidos (SLA Superado)</option>
+                <option value="all">Todos los SLAs</option>
+                <option value="within">Dentro de Plazo</option>
+                <option value="breached">SLA Excedido</option>
               </select>
             </div>
           </div>
 
-          {/* Tickets Cards Grid */}
+          {/* Tickets List */}
           {tickets.length === 0 ? (
-            <div className="rounded-2xl border border-hairline bg-surface p-12 text-center space-y-3 shadow-sm">
-              <div className="w-12 h-12 rounded-2xl bg-canvas border border-hairline flex items-center justify-center mx-auto text-rose-500 shadow-xs">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <h3 className="text-sm font-bold text-primary">No hay casos registrados con estos filtros</h3>
-              <p className="text-xs text-secondary max-w-sm mx-auto">
-                Los casos nuevos que se radiquen aparecerán organizados aquí con su respectivo temporizador de SLA.
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(true)}
-                className="craft-btn-primary text-xs mt-2"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Radicar Primer Caso
-              </button>
+            <div className="rounded-2xl border border-hairline bg-surface p-12 text-center space-y-3">
+              <TicketItemIcon className="w-8 h-8 mx-auto text-secondary" />
+              <div className="text-sm font-bold text-primary">No se encontraron tickets con los filtros actuales</div>
+              <p className="text-xs text-secondary">Ajusta los criterios de búsqueda o radica un nuevo caso.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3.5">
+            <div className="space-y-3">
               {tickets.map((t) => (
                 <div
                   key={t.id}
                   onClick={() => setSelectedTicketCode(t.ticket_code)}
-                  className="rounded-2xl border border-hairline bg-surface p-5 space-y-3 hover:border-rose-500/40 hover:shadow-md hover:-translate-y-0.5 cursor-pointer transition-all duration-200 group flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  className="rounded-2xl border border-hairline bg-surface p-4 hover:border-rose-500/40 hover:shadow-md cursor-pointer transition-all duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
                 >
-                  <div className="space-y-1.5 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-bold text-rose-500 px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20">
-                        {t.ticket_code}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-mono text-xs font-bold text-rose-500">{t.ticket_code}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${
+                        t.status === 'open' ? 'text-blue-500 border-blue-500/30 bg-blue-500/5' :
+                        t.status === 'in_progress' ? 'text-amber-500 border-amber-500/30 bg-amber-500/5' :
+                        t.status === 'resolved' ? 'text-emerald-500 border-emerald-500/30 bg-emerald-500/5' :
+                        'text-secondary border-hairline bg-canvas'
+                      }`}>
+                        {t.status}
                       </span>
-                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-canvas border border-hairline text-secondary uppercase tracking-wider">
-                        {t.category_name}
-                      </span>
-                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-canvas border border-hairline text-secondary uppercase tracking-wider">
-                        {t.priority_name}
-                      </span>
-                      {t.assignee_name && (
-                        <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500">
-                          {t.assignee_name}
-                        </span>
-                      )}
+                      <span className="text-xs text-secondary font-medium">• {t.category_name}</span>
                     </div>
-                    <h3 className="text-sm font-bold text-primary group-hover:text-rose-500 transition-colors">
+                    <h4 className="text-sm font-bold text-primary group-hover:text-rose-500 transition-colors">
                       {t.title}
-                    </h3>
-                    <div className="flex items-center gap-3 text-xs text-secondary">
-                      <span className="flex items-center gap-1">
-                        <User className="w-3.5 h-3.5 text-secondary" />
-                        {t.requester_name}
-                      </span>
-                      <span>•</span>
-                      <span>Creado el {new Date(t.created_at).toLocaleDateString()}</span>
-                    </div>
+                    </h4>
+                    <p className="text-xs text-secondary line-clamp-1">{t.description}</p>
                   </div>
 
-                  <div className="flex items-center justify-between md:justify-end gap-4 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-hairline">
-                    <div className="text-left md:text-right text-xs">
-                      <span className="text-[10px] uppercase font-bold text-secondary block">
-                        Límite de Solución
-                      </span>
-                      <span className="font-extrabold text-primary flex items-center md:justify-end gap-1 text-xs">
-                        <Clock className="w-3.5 h-3.5 text-rose-500" />
-                        {t.sla_resolution_hours} horas
-                      </span>
+                  <div className="flex items-center gap-4 text-xs text-secondary shrink-0">
+                    <div className="text-right">
+                      <span className="block font-semibold text-primary">{t.requester_name}</span>
+                      <span className="block text-[11px]">{new Date(t.created_at).toLocaleDateString()}</span>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          t.status === 'open'
-                            ? 'bg-amber-500/10 text-amber-500 border border-amber-500/25'
-                            : t.status === 'in_progress'
-                            ? 'bg-blue-500/10 text-blue-500 border border-blue-500/25'
-                            : t.status === 'waiting'
-                            ? 'bg-purple-500/10 text-purple-500 border border-purple-500/25'
-                            : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/25'
-                        }`}
-                      >
-                        {t.status === 'open' && 'Abierto'}
-                        {t.status === 'in_progress' && 'En Progreso'}
-                        {t.status === 'waiting' && 'En Espera'}
-                        {t.status === 'resolved' && 'Resuelto'}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                    </div>
+                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>
               ))}
@@ -461,244 +607,562 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
         </div>
       )}
 
-      {/* Tab 2: Living Support Memory (Editor & Live Preview) */}
-      {activeTab === 'context' && (
-        <div className="craft-card space-y-5">
+      {/* Tab 2: Members & Custom Invitations (Sprint 4) */}
+      {activeTab === 'members' && (
+        <div className="space-y-8 animate-fade-in">
+          {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-hairline">
             <div>
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-canvas border border-hairline flex items-center justify-center text-rose-500 shadow-xs">
-                  <BookOpen className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-primary">
-                  Memoria de Soporte Viva (Help Desk Context)
-                </h3>
-                {contextData && (
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-canvas border border-hairline text-secondary font-semibold">
-                    Versión {contextData.version}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-secondary mt-1">
-                Base viva de conocimiento y resoluciones. La IA aprende continuamente de cada caso cerrado para mejorar respuestas futuras.
+              <h2 className="text-lg font-bold text-primary tracking-tight">
+                Gestión de Usuarios y Enlaces de Invitación
+              </h2>
+              <p className="text-xs text-secondary mt-0.5">
+                Los usuarios se unen mediante enlaces de invitación configurados con roles preestablecidos
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center bg-canvas p-1 rounded-xl border border-hairline">
-                <button
-                  type="button"
-                  onClick={() => setMemoryViewMode('editor')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                    memoryViewMode === 'editor'
-                      ? 'bg-surface text-primary shadow-xs'
-                      : 'text-secondary hover:text-primary'
-                  }`}
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  Editor
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMemoryViewMode('preview')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                    memoryViewMode === 'preview'
-                      ? 'bg-surface text-primary shadow-xs'
-                      : 'text-secondary hover:text-primary'
-                  }`}
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  Vista Previa
-                </button>
-              </div>
-
-              {desk.user_role === 'admin' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setShowIngestModal(true)}
-                    className="craft-btn-secondary text-xs"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5 text-rose-500" />
-                    Re-indexar Casos
-                  </button>
-                  <button
-                    type="button"
-                    disabled={savingContext}
-                    onClick={handleSaveContext}
-                    className="craft-btn-primary text-xs font-semibold"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    {savingContext ? 'Guardando...' : contextSaved ? '¡Guardado!' : 'Guardar Memoria'}
-                  </button>
-                </>
-              )}
-            </div>
+            {desk.user_role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => setShowCreateInviteModal(true)}
+                className="craft-btn-primary text-xs shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Crear Enlace de Invitación
+              </button>
+            )}
           </div>
 
-          {memoryViewMode === 'editor' ? (
-            <div className="rounded-2xl border border-hairline bg-canvas p-4 shadow-xs">
-              <textarea
-                rows={16}
-                value={contextContent}
-                readOnly={desk.user_role !== 'admin'}
-                onChange={(e) => setContextContent(e.target.value)}
-                className="craft-input w-full text-xs font-mono leading-relaxed"
-                placeholder="Directrices, políticas y síntesis de casos..."
-              />
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-hairline bg-canvas p-6 shadow-xs prose prose-sm max-w-none text-xs text-primary leading-relaxed whitespace-pre-wrap">
-              {contextContent}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Tab 3: Governance & AI Feature Toggles (RBAC Matrix) & SLAs */}
-      {activeTab === 'governance' && (
-        <div className="space-y-6">
-          {/* Bento Card: Matriz de Gobernanza de IA y Control RBAC */}
-          <div className="craft-card space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-hairline">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-canvas border border-hairline flex items-center justify-center text-rose-500 shadow-xs">
-                  <ShieldCheck className="w-4 h-4" />
+          {/* Section A: Active Invitation Links (Custom Roles) */}
+          {desk.user_role === 'admin' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-rose-500" />
+                  <h3 className="text-sm font-bold text-primary">Enlaces de Invitación Personalizados</h3>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-primary">
-                    Matriz de Gobernanza de IA y Control por Rol (RBAC)
-                  </h3>
-                  <p className="text-xs text-secondary">
-                    Define qué capacidades de IA están habilitadas y accesibles para cada perfil de usuario en este Help Desk.
-                  </p>
-                </div>
+                <span className="text-xs text-secondary">
+                  {invitations.length} {invitations.length === 1 ? 'enlace activo' : 'enlaces activos'}
+                </span>
               </div>
 
-              {togglesSavedFeedback && (
-                <span className="text-xs text-emerald-500 font-bold flex items-center gap-1 self-start sm:self-auto animate-in fade-in duration-150">
-                  <Check className="w-3.5 h-3.5" />
-                  ¡Configuración RBAC guardada!
-                </span>
+              {invitations.length === 0 ? (
+                <div className="rounded-2xl border border-hairline bg-surface p-8 text-center space-y-2">
+                  <p className="text-xs text-secondary">No hay enlaces de invitación generados.</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateInviteModal(true)}
+                    className="craft-btn-secondary text-xs mx-auto"
+                  >
+                    Crear el primer enlace
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {invitations.map((inv) => {
+                    const roleLabel = 
+                      inv.role === 'agent' ? 'Soporte / Agente' :
+                      inv.role === 'admin' ? 'Administrador' : 'Usuario / Solicitante';
+                    const roleColor = 
+                      inv.role === 'agent' ? 'text-blue-500 bg-blue-500/10 border-blue-500/20' :
+                      inv.role === 'admin' ? 'text-rose-500 bg-rose-500/10 border-rose-500/20' :
+                      'text-zinc-500 bg-canvas border-hairline';
+
+                    return (
+                      <div
+                        key={inv.id}
+                        className={`rounded-2xl border p-4 space-y-3 transition-all ${
+                          inv.is_active ? 'border-hairline bg-surface shadow-xs' : 'border-zinc-500/20 bg-canvas opacity-75'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${roleColor}`}>
+                              Ingreso como {roleLabel}
+                            </span>
+                            <h4 className="text-sm font-bold text-primary mt-1.5">
+                              {inv.label || 'Enlace de acceso a la mesa'}
+                            </h4>
+                          </div>
+
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                            inv.is_active ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5' : 'text-zinc-400 border-hairline bg-canvas'
+                          }`}>
+                            {inv.is_active ? 'Activo' : 'Pausado'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-secondary pt-1 border-t border-hairline">
+                          <span>Usos: <strong>{inv.uses_count}</strong> {inv.max_uses ? `/ ${inv.max_uses}` : '(ilimitado)'}</span>
+                          <span className="font-mono text-[11px]">{inv.code}</span>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-hairline">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyInviteLink(inv.code)}
+                            className="craft-btn-secondary text-xs py-1.5 px-3"
+                          >
+                            {copiedCode === inv.code ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                <span className="text-emerald-500">¡Copiado!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5" />
+                                Copiar Enlace
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleInvitation(inv.id)}
+                            className="craft-btn-secondary text-xs py-1.5 px-3 text-secondary hover:text-primary"
+                            title={inv.is_active ? 'Pausar enlace' : 'Reactivar enlace'}
+                          >
+                            {inv.is_active ? 'Pausar' : 'Reanudar'}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteInvitation(inv.id)}
+                            className="p-1.5 rounded-xl border border-hairline text-secondary hover:text-rose-500 hover:border-rose-500/30 transition-colors"
+                            title="Eliminar enlace"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
+          )}
 
-            {loadingToggles ? (
-              <div className="text-center py-8 text-xs text-secondary">
-                Cargando matriz de gobierno...
+          {/* Section B: Desk Members Directory */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-rose-500" />
+                <h3 className="text-sm font-bold text-primary">Miembros de la Mesa de Ayuda</h3>
+              </div>
+
+              <div className="w-full sm:w-64">
+                <input
+                  type="text"
+                  value={memberSearch}
+                  onChange={(e) => setMemberSearch(e.target.value)}
+                  placeholder="Buscar por nombre o correo..."
+                  className="craft-input text-xs py-1.5 w-full"
+                />
+              </div>
+            </div>
+
+            {loadingMembers ? (
+              <div className="p-8 text-center text-xs text-secondary">Cargando directorio de miembros...</div>
+            ) : filteredMembers.length === 0 ? (
+              <div className="p-8 rounded-2xl border border-hairline bg-surface text-center text-xs text-secondary">
+                No se encontraron miembros con el criterio de búsqueda.
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="rounded-2xl border border-hairline bg-surface overflow-hidden shadow-xs">
                 <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-hairline text-secondary text-[11px] uppercase tracking-wider">
-                      <th className="py-2.5 px-3">Funcionalidad de IA</th>
-                      <th className="py-2.5 px-3 text-center">Estado Global</th>
-                      <th className="py-2.5 px-3 text-center">Solicitante</th>
-                      <th className="py-2.5 px-3 text-center">Agente</th>
-                      <th className="py-2.5 px-3 text-center">Administrador</th>
+                  <thead className="bg-canvas border-b border-hairline text-secondary font-bold uppercase tracking-wider text-[10px]">
+                    <tr>
+                      <th className="py-3 px-4">Usuario</th>
+                      <th className="py-3 px-4">Rol Asignado</th>
+                      <th className="py-3 px-4">Estado</th>
+                      <th className="py-3 px-4">Fecha de Ingreso</th>
+                      {desk.user_role === 'admin' && (
+                        <th className="py-3 px-4 text-right">Acciones</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-hairline">
-                    {toggles.map((t) => (
-                      <tr key={t.id} className="hover:bg-canvas/50 transition-colors">
-                        <td className="py-3 px-3">
-                          <span className="font-bold text-primary block">{t.feature_label}</span>
-                          <span className="text-[11px] text-secondary">{t.description}</span>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <button
-                            type="button"
-                            disabled={desk.user_role !== 'admin' || savingToggles}
-                            onClick={() => handleToggleChange(t.feature_name, 'is_enabled')}
-                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer transition-all ${
-                              t.is_enabled
-                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/25'
-                                : 'bg-surface text-secondary border border-hairline'
-                            }`}
-                          >
-                            {t.is_enabled ? 'Activo' : 'Pausado'}
-                          </button>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <button
-                            type="button"
-                            disabled={desk.user_role !== 'admin' || savingToggles}
-                            onClick={() => handleToggleChange(t.feature_name, 'role_requester')}
-                            className="cursor-pointer text-secondary hover:text-primary"
-                          >
-                            {t.role_requester ? (
-                              <CheckSquare className="w-4 h-4 mx-auto text-rose-500" />
+                    {filteredMembers.map((m) => {
+                      return (
+                        <tr key={m.id} className="hover:bg-canvas/50 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-canvas border border-hairline flex items-center justify-center font-bold text-primary shadow-xs">
+                                {m.full_name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <span className="font-bold text-primary block">{m.full_name}</span>
+                                <span className="text-[11px] text-secondary block">{m.email}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            {desk.user_role === 'admin' ? (
+                              <select
+                                value={m.role}
+                                onChange={(e) => handleUpdateMemberRole(m.user_id, e.target.value)}
+                                className="craft-input text-xs py-1 px-2.5 font-medium cursor-pointer"
+                              >
+                                <option value="requester">Usuario / Solicitante</option>
+                                <option value="agent">Soporte / Agente</option>
+                                <option value="admin">Administrador</option>
+                              </select>
                             ) : (
-                              <Square className="w-4 h-4 mx-auto text-secondary/40" />
+                              <span className="font-bold text-primary uppercase text-[11px]">
+                                {m.role}
+                              </span>
                             )}
-                          </button>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <button
-                            type="button"
-                            disabled={desk.user_role !== 'admin' || savingToggles}
-                            onClick={() => handleToggleChange(t.feature_name, 'role_agent')}
-                            className="cursor-pointer text-secondary hover:text-primary"
-                          >
-                            {t.role_agent ? (
-                              <CheckSquare className="w-4 h-4 mx-auto text-rose-500" />
-                            ) : (
-                              <Square className="w-4 h-4 mx-auto text-secondary/40" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <button
-                            type="button"
-                            disabled={desk.user_role !== 'admin' || savingToggles}
-                            onClick={() => handleToggleChange(t.feature_name, 'role_admin')}
-                            className="cursor-pointer text-secondary hover:text-primary"
-                          >
-                            {t.role_admin ? (
-                              <CheckSquare className="w-4 h-4 mx-auto text-rose-500" />
-                            ) : (
-                              <Square className="w-4 h-4 mx-auto text-secondary/40" />
-                            )}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                              m.is_active
+                                ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5'
+                                : 'text-zinc-400 border-hairline bg-canvas'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${m.is_active ? 'bg-emerald-500' : 'bg-zinc-400'}`} />
+                              {m.is_active ? 'Activo' : 'Desactivado'}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-secondary">
+                            {new Date(m.created_at).toLocaleDateString()}
+                          </td>
+
+                          {desk.user_role === 'admin' && (
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleMemberActive(m.user_id, m.is_active)}
+                                  className={`p-1.5 rounded-xl border border-hairline transition-colors ${
+                                    m.is_active
+                                      ? 'text-secondary hover:text-amber-500 hover:border-amber-500/30'
+                                      : 'text-emerald-500 hover:text-emerald-600 hover:border-emerald-500/30'
+                                  }`}
+                                  title={m.is_active ? 'Desactivar usuario' : 'Reactivar usuario'}
+                                >
+                                  {m.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMember(m.user_id, m.full_name)}
+                                  className="p-1.5 rounded-xl border border-hairline text-secondary hover:text-rose-500 hover:border-rose-500/30 transition-colors"
+                                  title="Eliminar de la mesa"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
           </div>
+        </div>
+      )}
 
-          {/* Catalog & SLA Policies Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Categories Card */}
-            <div className="craft-card space-y-4">
-              <h3 className="text-sm font-bold text-primary">Catálogo de Categorías</h3>
-              <div className="space-y-2.5">
-                {desk.categories.map((c) => (
-                  <div key={c.id} className="p-3.5 rounded-xl bg-canvas border border-hairline text-xs flex justify-between shadow-xs">
-                    <span className="font-bold text-primary">{c.name}</span>
-                    <span className="text-secondary">{c.description}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* Tab 3: Desk-Specific AI Vault (BYOK) (Sprint 4) */}
+      {activeTab === 'ai' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Header */}
+          <div className="pb-4 border-b border-hairline">
+            <h2 className="text-lg font-bold text-primary tracking-tight">
+              Bóveda BYOK — Conexión de IA para {desk.name}
+            </h2>
+            <p className="text-xs text-secondary mt-0.5">
+              Configura claves de API de Google Gemini, Anthropic Claude u OpenAI exclusivas para este espacio de trabajo.
+            </p>
+          </div>
 
-            {/* SLA Policies Card */}
-            <div className="craft-card space-y-4">
-              <h3 className="text-sm font-bold text-primary">Matriz de Prioridades y SLAs</h3>
-              <div className="space-y-2.5">
-                {desk.priorities.map((p) => (
-                  <div key={p.id} className="p-3.5 rounded-xl bg-canvas border border-hairline text-xs flex justify-between shadow-xs">
-                    <span className="font-bold text-primary">{p.name} (Nivel {p.level})</span>
-                    <span className="text-secondary font-medium">
-                      Respuesta: <strong className="text-primary">{p.sla_response_hours}h</strong> | Solución: <strong className="text-primary">{p.sla_resolution_hours}h</strong>
+          {/* Current Status Bento Card */}
+          <div className="rounded-2xl border border-hairline bg-surface p-6 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-hairline gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-canvas border border-hairline text-rose-500 flex items-center justify-center shadow-xs">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-primary">Estado de Conexión en esta Mesa</h3>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${
+                      deskAIStatus?.is_connected
+                        ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5'
+                        : 'text-amber-500 border-amber-500/20 bg-amber-500/5'
+                    }`}>
+                      {deskAIStatus?.is_connected ? 'Conectado' : 'Sin Configurar'}
                     </span>
                   </div>
-                ))}
+                  <p className="text-xs text-secondary mt-0.5">
+                    {deskAIStatus?.is_connected
+                      ? `Proveedor activo: ${deskAIStatus.provider?.toUpperCase()} • Modelo: ${deskAIStatus.model_name}`
+                      : 'Esta mesa de ayuda opera actualmente en modo manual sin asistencia de IA.'}
+                  </p>
+                </div>
               </div>
+
+              {deskAIStatus?.is_connected && (
+                <button
+                  type="button"
+                  onClick={handleDisconnectDeskAI}
+                  className="craft-btn-secondary text-xs text-rose-500 hover:border-rose-500/30"
+                >
+                  Desconectar Clave
+                </button>
+              )}
             </div>
+
+            {/* Form to connect or change key */}
+            <form onSubmit={handleConnectDeskAI} className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-2">
+                  1. Selecciona el Proveedor de Inteligencia Artificial
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { id: 'gemini', name: 'Google Gemini', desc: 'Recomendado • Latencia ultrarrápida' },
+                    { id: 'openai', name: 'OpenAI GPT-4o', desc: 'Alta precisión y razonamiento estructurado' },
+                    { id: 'claude', name: 'Anthropic Claude', desc: 'Líder en síntesis y empatía técnica' },
+                  ].map((p) => (
+                    <div
+                      key={p.id}
+                      onClick={() => {
+                        setAIProvider(p.id as any);
+                        if (p.id === 'gemini') setSelectedAIModel('gemini-2.0-flash');
+                        if (p.id === 'openai') setSelectedAIModel('gpt-4o-mini');
+                        if (p.id === 'claude') setSelectedAIModel('claude-3-5-haiku-20241022');
+                      }}
+                      className={`p-4 rounded-2xl border cursor-pointer transition-all duration-150 ${
+                        aiProvider === p.id
+                          ? 'border-rose-500 bg-rose-500/5 shadow-xs'
+                          : 'border-hairline bg-canvas hover:border-zinc-400'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-primary">{p.name}</span>
+                        {aiProvider === p.id && <Check className="w-4 h-4 text-rose-500" />}
+                      </div>
+                      <span className="text-[11px] text-secondary mt-1 block">{p.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* API Key Input */}
+              <div>
+                <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-2">
+                  2. Clave de API Privada ({aiProvider.toUpperCase()})
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary pointer-events-none">
+                    <Key className="w-4 h-4" />
+                  </div>
+                  <input
+                    type={showAIKey ? 'text' : 'password'}
+                    value={aiApiKey}
+                    onChange={(e) => setAIApiKey(e.target.value)}
+                    placeholder={`Ingresa tu API Key de ${aiProvider.toUpperCase()}`}
+                    className="craft-input-with-icon pr-11 text-xs"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAIKey(!showAIKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-primary transition-colors p-1"
+                  >
+                    {showAIKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-secondary mt-1.5 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  Cifrado AES-256 en reposo. Tu clave solo se utiliza para atender los casos de esta mesa.
+                </p>
+              </div>
+
+              {/* Feedback messages */}
+              {deskAIMsg && (
+                <div className={`p-4 rounded-2xl border text-xs font-medium flex items-center gap-2.5 ${
+                  deskAIMsg.type === 'success'
+                    ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-500'
+                    : 'border-rose-500/30 bg-rose-500/5 text-rose-500'
+                }`}>
+                  {deskAIMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+                  {deskAIMsg.text}
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={testingDeskAI || !aiApiKey.trim()}
+                  className="craft-btn-primary text-xs shadow-sm"
+                >
+                  {testingDeskAI ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Validando y Vinculando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Vincular a esta Mesa de Ayuda
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Organizational Memory & Context */}
+      {activeTab === 'context' && (
+        <div className="space-y-5 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-hairline">
+            <div>
+              <h2 className="text-base font-bold text-primary">Memoria Viva y Contexto Organizacional</h2>
+              <p className="text-xs text-secondary mt-0.5">
+                Base de conocimiento que orienta las respuestas y diagnósticos del copiloto de soporte.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowIngestModal(true)}
+                className="craft-btn-secondary text-xs"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Ingesta Retrospectiva
+              </button>
+              {desk.user_role === 'admin' && (
+                <button
+                  type="button"
+                  onClick={handleSaveContext}
+                  disabled={savingContext}
+                  className="craft-btn-primary text-xs shadow-sm"
+                >
+                  {savingContext ? 'Guardando...' : (contextSaved ? '¡Guardado!' : 'Guardar Memoria')}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-hairline bg-surface p-5 shadow-xs">
+            <textarea
+              rows={16}
+              value={contextContent}
+              onChange={(e) => setContextContent(e.target.value)}
+              disabled={desk.user_role !== 'admin'}
+              className="w-full bg-canvas border border-hairline rounded-xl p-4 text-xs font-mono text-primary leading-relaxed focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+              placeholder="Escribe aquí las directrices y contexto organizacional de la mesa..."
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Tab 5: Governance & AI Feature Toggles */}
+      {activeTab === 'governance' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center justify-between pb-3 border-b border-hairline">
+            <div>
+              <h2 className="text-base font-bold text-primary">Gobierno y Matriz de Control de IA (RBAC)</h2>
+              <p className="text-xs text-secondary mt-0.5">
+                Habilita o restringe las capacidades de asistencia inteligente según el rol institucional.
+              </p>
+            </div>
+            {togglesSavedFeedback && (
+              <span className="text-xs text-emerald-500 font-bold animate-fade-in flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" /> Cambios sincronizados
+              </span>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-hairline bg-surface overflow-hidden shadow-xs">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-canvas border-b border-hairline text-secondary font-bold uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="py-3 px-4">Función Inteligente</th>
+                  <th className="py-3 px-3 text-center">Global</th>
+                  <th className="py-3 px-3 text-center">Solicitantes</th>
+                  <th className="py-3 px-3 text-center">Agentes</th>
+                  <th className="py-3 px-3 text-center">Administradores</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                {toggles.map((t) => (
+                  <tr key={t.id} className="hover:bg-canvas/50 transition-colors">
+                    <td className="py-3 px-4">
+                      <span className="font-bold text-primary block">{t.feature_label}</span>
+                      <span className="text-[11px] text-secondary block">{t.description}</span>
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <button
+                        type="button"
+                        disabled={desk.user_role !== 'admin' || savingToggles}
+                        onClick={() => handleToggleChange(t.feature_name, 'is_enabled')}
+                        className="cursor-pointer text-secondary hover:text-primary"
+                      >
+                        {t.is_enabled ? (
+                          <CheckSquare className="w-4 h-4 mx-auto text-rose-500" />
+                        ) : (
+                          <Square className="w-4 h-4 mx-auto text-secondary/40" />
+                        )}
+                      </button>
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <button
+                        type="button"
+                        disabled={desk.user_role !== 'admin' || savingToggles}
+                        onClick={() => handleToggleChange(t.feature_name, 'role_requester')}
+                        className="cursor-pointer text-secondary hover:text-primary"
+                      >
+                        {t.role_requester ? (
+                          <CheckSquare className="w-4 h-4 mx-auto text-rose-500" />
+                        ) : (
+                          <Square className="w-4 h-4 mx-auto text-secondary/40" />
+                        )}
+                      </button>
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <button
+                        type="button"
+                        disabled={desk.user_role !== 'admin' || savingToggles}
+                        onClick={() => handleToggleChange(t.feature_name, 'role_agent')}
+                        className="cursor-pointer text-secondary hover:text-primary"
+                      >
+                        {t.role_agent ? (
+                          <CheckSquare className="w-4 h-4 mx-auto text-rose-500" />
+                        ) : (
+                          <Square className="w-4 h-4 mx-auto text-secondary/40" />
+                        )}
+                      </button>
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <button
+                        type="button"
+                        disabled={desk.user_role !== 'admin' || savingToggles}
+                        onClick={() => handleToggleChange(t.feature_name, 'role_admin')}
+                        className="cursor-pointer text-secondary hover:text-primary"
+                      >
+                        {t.role_admin ? (
+                          <CheckSquare className="w-4 h-4 mx-auto text-rose-500" />
+                        ) : (
+                          <Square className="w-4 h-4 mx-auto text-secondary/40" />
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -741,6 +1205,127 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
           }}
         />
       )}
+
+      {/* Create Custom Invitation Modal (Sprint 4) */}
+      {showCreateInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md rounded-3xl border border-hairline bg-surface p-6 sm:p-7 shadow-2xl">
+            <div className="flex items-start justify-between pb-4 border-b border-hairline">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-canvas border border-hairline text-rose-500 flex items-center justify-center">
+                  <Link2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-primary">Generar Enlace de Invitación</h3>
+                  <p className="text-[11px] text-secondary">Configura el rol y condiciones del link</p>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateInvitation} className="mt-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1.5">
+                  Rol de Acceso Otorgado
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setInviteRole('requester')}
+                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                      inviteRole === 'requester'
+                        ? 'border-rose-500 bg-rose-500/5 text-rose-500 shadow-xs'
+                        : 'border-hairline bg-canvas text-secondary hover:text-primary'
+                    }`}
+                  >
+                    Usuario / Empleado
+                    <span className="block font-normal text-[10px] text-secondary mt-0.5">Radica incidencias</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setInviteRole('agent')}
+                    className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                      inviteRole === 'agent'
+                        ? 'border-blue-500 bg-blue-500/5 text-blue-500 shadow-xs'
+                        : 'border-hairline bg-canvas text-secondary hover:text-primary'
+                    }`}
+                  >
+                    Soporte / Agente
+                    <span className="block font-normal text-[10px] text-secondary mt-0.5">Atiende tickets</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1.5">
+                  Etiqueta Descriptiva
+                </label>
+                <input
+                  type="text"
+                  value={inviteLabel}
+                  onChange={(e) => setInviteLabel(e.target.value)}
+                  placeholder="ej. Enlace para equipo de Ventas"
+                  className="craft-input text-xs w-full py-2"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1.5">
+                    Límite de Usos
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={inviteMaxUses ?? ''}
+                    onChange={(e) => setInviteMaxUses(e.target.value ? parseInt(e.target.value) : undefined)}
+                    placeholder="Sin límite"
+                    className="craft-input text-xs w-full py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1.5">
+                    Días de Expiración
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={inviteExpiresDays ?? ''}
+                    onChange={(e) => setInviteExpiresDays(e.target.value ? parseInt(e.target.value) : undefined)}
+                    placeholder="7 días"
+                    className="craft-input text-xs w-full py-2"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-hairline">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateInviteModal(false)}
+                  className="craft-btn-secondary text-xs"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingInvite}
+                  className="craft-btn-primary text-xs shadow-sm"
+                >
+                  {creatingInvite ? 'Creando...' : 'Crear Enlace'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+// Helper icon
+const TicketItemIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+  </svg>
+);

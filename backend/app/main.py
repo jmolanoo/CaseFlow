@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.database import engine, Base
+from app.database import engine, Base, init_db
 from app.routers import auth, ai_vault, help_desks, tickets, ai_context
 
-# Initialize tables
-Base.metadata.create_all(bind=engine)
+# Initialize tables & migrations
+init_db()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

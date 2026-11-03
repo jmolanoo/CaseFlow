@@ -23,7 +23,8 @@ class UserAICredential(Base):
     __tablename__ = "user_ai_credentials"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    help_desk_id = Column(Integer, ForeignKey("help_desks.id", ondelete="CASCADE"), nullable=True, index=True)
     provider = Column(String(50), nullable=False)  # 'gemini', 'openai', 'claude'
     encrypted_api_key = Column(Text, nullable=False)
     model_name = Column(String(100), nullable=False)
@@ -33,6 +34,7 @@ class UserAICredential(Base):
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="ai_credentials")
+    help_desk = relationship("HelpDesk", back_populates="ai_credentials")
 
 
 class HelpDesk(Base):
@@ -53,19 +55,41 @@ class HelpDesk(Base):
     context = relationship("HelpDeskContext", back_populates="help_desk", uselist=False, cascade="all, delete-orphan")
     toggles = relationship("AIFeatureToggle", back_populates="help_desk", cascade="all, delete-orphan")
     tickets = relationship("Ticket", back_populates="help_desk", cascade="all, delete-orphan")
+    ai_credentials = relationship("UserAICredential", back_populates="help_desk", cascade="all, delete-orphan")
+    invitations = relationship("HelpDeskInvitation", back_populates="help_desk", cascade="all, delete-orphan")
 
 
 class HelpDeskMember(Base):
     __tablename__ = "help_desk_members"
 
     id = Column(Integer, primary_key=True, index=True)
-    help_desk_id = Column(Integer, ForeignKey("help_desks.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    help_desk_id = Column(Integer, ForeignKey("help_desks.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     role = Column(String(50), default="requester")  # 'admin', 'agent', 'requester'
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     help_desk = relationship("HelpDesk", back_populates="members")
     user = relationship("User", back_populates="memberships")
+
+
+class HelpDeskInvitation(Base):
+    __tablename__ = "help_desk_invitations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    help_desk_id = Column(Integer, ForeignKey("help_desks.id", ondelete="CASCADE"), nullable=False, index=True)
+    code = Column(String(64), unique=True, index=True, nullable=False)
+    role = Column(String(50), default="requester", nullable=False)  # 'admin', 'agent', 'requester'
+    label = Column(String(150), nullable=True)
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    is_active = Column(Boolean, default=True)
+    max_uses = Column(Integer, nullable=True)
+    uses_count = Column(Integer, default=0)
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    help_desk = relationship("HelpDesk", back_populates="invitations")
+    created_by = relationship("User")
 
 
 class Category(Base):

@@ -20,6 +20,8 @@ export interface AIStatus {
   latency_ms: number | null;
   last_tested_at: string | null;
   available_models: ModelOption[];
+  desk_slug?: string | null;
+  desk_name?: string | null;
 }
 
 export interface Category {
@@ -153,6 +155,46 @@ export interface CopilotSummary {
   key_points: string[];
 }
 
+export interface HelpDeskMemberItem {
+  id: number;
+  user_id: number;
+  email: string;
+  full_name: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface HelpDeskInvitationItem {
+  id: number;
+  help_desk_id: number;
+  code: string;
+  role: string;
+  label?: string;
+  is_active: boolean;
+  max_uses?: number | null;
+  uses_count: number;
+  expires_at?: string | null;
+  created_at: string;
+  invite_url: string;
+}
+
+export interface InvitationPreview {
+  valid: boolean;
+  code: string;
+  help_desk_name: string;
+  help_desk_slug: string;
+  role: string;
+  label?: string;
+  message?: string;
+}
+
+export interface JoinDeskResult {
+  message: string;
+  role: string;
+  desk: HelpDeskDetails;
+}
+
 const API_BASE = '/api';
 
 function getHeaders(token?: string | null): HeadersInit {
@@ -189,7 +231,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error al iniciar sesión');
+      throw new Error(err.detail || 'Credenciales inválidas');
     }
     return res.json();
   },
@@ -198,13 +240,11 @@ export const api = {
     const res = await fetch(`${API_BASE}/auth/me`, {
       headers: getHeaders(),
     });
-    if (!res.ok) {
-      throw new Error('Sesión expirada');
-    }
+    if (!res.ok) throw new Error('Sesión expirada o no autorizada');
     return res.json();
   },
 
-  // AI Vault
+  // Global / Legacy AI Vault
   async getAIStatus(): Promise<AIStatus> {
     const res = await fetch(`${API_BASE}/ai/vault/status`, {
       headers: getHeaders(),
@@ -213,50 +253,73 @@ export const api = {
     return res.json();
   },
 
-  async testAIConnection(provider: string, apiKey: string, selectedModel?: string) {
+  async testAIKey(provider: string, api_key: string, model_name?: string) {
     const res = await fetch(`${API_BASE}/ai/vault/test`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({
-        provider,
-        api_key: apiKey,
-        selected_model: selectedModel,
-      }),
+      body: JSON.stringify({ provider, api_key, model_name }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error al probar conexión');
+      throw new Error(err.detail || 'Fallo en la prueba de conexión');
     }
     return res.json();
   },
 
-  async connectAI(provider: string, apiKey: string, selectedModel?: string) {
+  async testAIConnection(provider: string, api_key: string, model_name?: string) {
+    return this.testAIKey(provider, api_key, model_name);
+  },
+
+  async connectAIKey(provider: string, api_key: string, model_name?: string) {
     const res = await fetch(`${API_BASE}/ai/vault/connect`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({
-        provider,
-        api_key: apiKey,
-        selected_model: selectedModel,
-      }),
+      body: JSON.stringify({ provider, api_key, model_name }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Error al conectar clave');
+      throw new Error(err.detail || 'Error al vincular clave de API');
     }
     return res.json();
-  },
-
-  async connectAIKey(provider: string, apiKey: string, selectedModel?: string) {
-    return this.connectAI(provider, apiKey, selectedModel);
   },
 
   async disconnectAI() {
     const res = await fetch(`${API_BASE}/ai/vault/disconnect`, {
-      method: 'POST',
+      method: 'DELETE',
       headers: getHeaders(),
     });
-    if (!res.ok) throw new Error('Error al desconectar IA');
+    if (!res.ok) throw new Error('Error al desvincular credenciales');
+    return res.json();
+  },
+
+  // Desk-Specific AI Vault (Sprint 4)
+  async getDeskAIStatus(slug: string): Promise<AIStatus> {
+    const res = await fetch(`${API_BASE}/ai/vault/status?desk_slug=${encodeURIComponent(slug)}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al consultar estado de IA para esta mesa');
+    return res.json();
+  },
+
+  async connectDeskAIKey(slug: string, provider: string, api_key: string, model_name?: string): Promise<{ success: boolean; latency_ms: number; message: string; model_name: string }> {
+    const res = await fetch(`${API_BASE}/ai/vault/connect`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ desk_slug: slug, provider, api_key, model_name }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'No se pudo vincular la clave de API a esta mesa');
+    }
+    return res.json();
+  },
+
+  async disconnectDeskAI(slug: string): Promise<{ message: string }> {
+    const res = await fetch(`${API_BASE}/ai/vault/disconnect?desk_slug=${encodeURIComponent(slug)}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al desvincular IA de esta mesa');
     return res.json();
   },
 
@@ -265,30 +328,22 @@ export const api = {
     const res = await fetch(`${API_BASE}/desks`, {
       headers: getHeaders(),
     });
-    if (!res.ok) throw new Error('Error al consultar mesas de ayuda');
+    if (!res.ok) throw new Error('Error al cargar mesas de ayuda');
     return res.json();
   },
 
-  async getDeskDetails(slug: string): Promise<HelpDeskDetails> {
-    const res = await fetch(`${API_BASE}/desks/${slug}`, {
-      headers: getHeaders(),
-    });
-    if (!res.ok) throw new Error('Error al obtener detalles de la mesa');
-    return res.json();
-  },
-
-  async createHelpDeskWizard(payload: {
+  async createHelpDesk(data: {
     name: string;
     slug: string;
     description?: string;
-    enable_ai: boolean;
-    categories?: Category[];
-    priorities?: Priority[];
+    enable_ai?: boolean;
+    categories?: Partial<Category>[];
+    priorities?: Partial<Priority>[];
   }): Promise<HelpDeskDetails> {
     const res = await fetch(`${API_BASE}/desks/wizard`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify(payload),
+      body: JSON.stringify(data),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -297,34 +352,147 @@ export const api = {
     return res.json();
   },
 
+  async createHelpDeskWizard(data: any): Promise<HelpDeskDetails> {
+    return this.createHelpDesk(data);
+  },
+
+  async getDeskDetails(slug: string): Promise<HelpDeskDetails> {
+    const res = await fetch(`${API_BASE}/desks/${slug}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al consultar mesa de ayuda');
+    return res.json();
+  },
+
   async toggleDeskAI(slug: string): Promise<HelpDeskDetails> {
     const res = await fetch(`${API_BASE}/desks/${slug}/ai-toggle`, {
       method: 'PATCH',
       headers: getHeaders(),
     });
-    if (!res.ok) throw new Error('Error al alternar IA de la mesa');
+    if (!res.ok) throw new Error('Error al cambiar estado de IA');
+    return res.json();
+  },
+
+  // Invitations & Joining (Sprint 4)
+  async previewInvitation(code: string): Promise<InvitationPreview> {
+    const res = await fetch(`${API_BASE}/desks/invitations/preview/${encodeURIComponent(code)}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Enlace o código de invitación inválido');
+    }
+    return res.json();
+  },
+
+  async joinDesk(code: string): Promise<JoinDeskResult> {
+    const res = await fetch(`${API_BASE}/desks/join`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ code }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'No fue posible unirse a la mesa de ayuda');
+    }
+    return res.json();
+  },
+
+  async getDeskInvitations(slug: string): Promise<HelpDeskInvitationItem[]> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/invitations`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al listar enlaces de invitación');
+    return res.json();
+  },
+
+  async createDeskInvitation(slug: string, payload: {
+    role: string;
+    label?: string;
+    max_uses?: number;
+    expires_days?: number;
+  }): Promise<HelpDeskInvitationItem> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/invitations`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al generar enlace de invitación');
+    }
+    return res.json();
+  },
+
+  async toggleDeskInvitation(slug: string, invitationId: number): Promise<HelpDeskInvitationItem> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/invitations/${invitationId}/toggle`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al alternar estado del enlace');
+    return res.json();
+  },
+
+  async deleteDeskInvitation(slug: string, invitationId: number): Promise<{ message: string }> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/invitations/${invitationId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al eliminar enlace de invitación');
+    return res.json();
+  },
+
+  // Members Management (Sprint 4)
+  async getDeskMembers(slug: string): Promise<HelpDeskMemberItem[]> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/members`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al listar miembros de la mesa');
+    return res.json();
+  },
+
+  async updateDeskMember(slug: string, userId: number, payload: { role?: string; is_active?: boolean }): Promise<HelpDeskMemberItem> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/members/${userId}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al actualizar usuario');
+    }
+    return res.json();
+  },
+
+  async removeDeskMember(slug: string, userId: number): Promise<{ message: string }> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/members/${userId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al eliminar usuario');
+    }
     return res.json();
   },
 
   // Tickets
   async getTickets(
-    slug: string,
-    statusFilter?: string,
-    categoryId?: number,
-    priorityId?: number,
+    slug: string, 
+    statusFilter?: string, 
+    catFilter?: number, 
+    priorityFilter?: number, 
     slaFilter?: string
   ): Promise<TicketItem[]> {
     const params = new URLSearchParams();
     if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
-    if (categoryId) params.append('category_id', categoryId.toString());
-    if (priorityId) params.append('priority_id', priorityId.toString());
-    if (slaFilter && slaFilter !== 'all') params.append('sla_filter', slaFilter);
+    if (catFilter) params.append('category_id', catFilter.toString());
+    if (priorityFilter) params.append('priority_id', priorityFilter.toString());
+    if (slaFilter && slaFilter !== 'all') params.append('sla_status', slaFilter);
 
     const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`${API_BASE}/desks/${slug}/tickets${qs}`, {
       headers: getHeaders(),
     });
-    if (!res.ok) throw new Error('Error al consultar tickets');
+    if (!res.ok) throw new Error('Error al cargar tickets');
     return res.json();
   },
 
@@ -350,7 +518,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/desks/${slug}/tickets/${ticketCode}`, {
       headers: getHeaders(),
     });
-    if (!res.ok) throw new Error('Error al obtener detalle del ticket');
+    if (!res.ok) throw new Error('Error al consultar ticket');
     return res.json();
   },
 

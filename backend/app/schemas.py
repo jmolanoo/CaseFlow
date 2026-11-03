@@ -35,6 +35,7 @@ class AIConnectRequest(BaseModel):
     provider: str = Field(..., pattern="^(gemini|openai|claude)$")
     api_key: str = Field(..., min_length=10)
     model_name: Optional[str] = None
+    desk_slug: Optional[str] = None
 
 class ModelOption(BaseModel):
     id: str
@@ -48,6 +49,8 @@ class AIStatusResponse(BaseModel):
     latency_ms: Optional[float] = None
     last_tested_at: Optional[datetime.datetime] = None
     available_models: List[ModelOption] = []
+    desk_slug: Optional[str] = None
+    desk_name: Optional[str] = None
 
 class AITestResponse(BaseModel):
     success: bool
@@ -256,3 +259,59 @@ class CopilotSummaryResponse(BaseModel):
 
 class TicketAssignRequest(BaseModel):
     assignee_id: int
+
+# --- Sprint 4: Member Management & Invitation Schemas ---
+class HelpDeskMemberResponse(BaseModel):
+    id: int
+    user_id: int
+    email: EmailStr
+    full_name: str
+    role: str
+    is_active: bool
+    created_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+class HelpDeskMemberUpdate(BaseModel):
+    role: Optional[str] = Field(None, pattern="^(admin|agent|requester)$")
+    is_active: Optional[bool] = None
+
+class InvitationCreate(BaseModel):
+    role: str = Field("requester", pattern="^(admin|agent|requester)$")
+    label: Optional[str] = Field(None, max_length=150)
+    max_uses: Optional[int] = Field(None, ge=1)
+    expires_days: Optional[int] = Field(None, ge=1)
+
+class InvitationResponse(BaseModel):
+    id: int
+    help_desk_id: int
+    code: str
+    role: str
+    label: Optional[str] = None
+    is_active: bool
+    max_uses: Optional[int] = None
+    uses_count: int
+    expires_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime
+    invite_url: str
+
+    class Config:
+        from_attributes = True
+
+class InvitationPreviewResponse(BaseModel):
+    valid: bool
+    code: str
+    help_desk_name: str
+    help_desk_slug: str
+    role: str
+    label: Optional[str] = None
+    message: Optional[str] = None
+
+class JoinDeskRequest(BaseModel):
+    code: str = Field(..., min_length=4)
+
+class JoinDeskResponse(BaseModel):
+    message: str
+    role: str
+    desk: HelpDeskResponse

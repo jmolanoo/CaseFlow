@@ -71,16 +71,6 @@ export const App: React.FC = () => {
   const handleAuthSuccess = (loggedUser: User) => {
     setUser(loggedUser);
     setAuthModal({ isOpen: false, tab: 'login' });
-    api.getAIStatus().then(setAIStatus).catch(() => null);
-  };
-
-  const refreshAI = async () => {
-    try {
-      const data = await api.getAIStatus();
-      setAIStatus(data);
-    } catch (err) {
-      console.error(err);
-    }
   };
 
   if (initializing) {
@@ -111,15 +101,12 @@ export const App: React.FC = () => {
           selectedDeskSlug ? (
             <WorkspaceView
               slug={selectedDeskSlug}
-              aiStatus={aiStatus}
               currentUser={user}
               onBackToDashboard={() => setSelectedDeskSlug(null)}
             />
           ) : (
             <Dashboard
               user={user}
-              aiStatus={aiStatus}
-              onRefreshAIStatus={refreshAI}
               onSelectDesk={(desk: HelpDeskListItem) => setSelectedDeskSlug(desk.slug)}
             />
           )

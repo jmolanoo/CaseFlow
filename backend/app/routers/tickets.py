@@ -31,6 +31,11 @@ def get_membership(slug: str, user_id: int, db: Session):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No perteneces a esta mesa de ayuda"
         )
+    if not member.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu cuenta en esta mesa de ayuda ha sido desactivada por el administrador."
+        )
     return desk, member
 
 def map_ticket_response(ticket: Ticket, db: Session) -> TicketResponse:
