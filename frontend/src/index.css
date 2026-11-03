@@ -5,45 +5,65 @@
 @layer base {
   :root {
     --bg-canvas: #ffffff;
-    --bg-surface: #f8f9fa;
+    --bg-surface: #f9fafb;
     --bg-surface-elevated: #ffffff;
-    --border-subtle: #e4e4e7;
-    --text-primary: #09090b;
-    --text-secondary: #71717a;
+    --border-subtle: #e5e7eb;
+    --border-strong: #d1d5db;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
     --accent: #f43f5e;
+    --accent-hover: #e11d48;
+    --accent-subtle: rgba(244, 63, 94, 0.08);
+    --accent-border: rgba(244, 63, 94, 0.25);
   }
 
   html.dark {
-    --bg-canvas: #0f1117;
-    --bg-surface: #161922;
-    --bg-surface-elevated: #1e2230;
-    --border-subtle: rgba(255, 255, 255, 0.08);
-    --text-primary: #ffffff;
-    --text-secondary: #a1a1aa;
+    --bg-canvas: #0d1117;
+    --bg-surface: #161b22;
+    --bg-surface-elevated: #21262d;
+    --border-subtle: rgba(240, 246, 252, 0.1);
+    --border-strong: rgba(240, 246, 252, 0.2);
+    --text-primary: #f0f6fc;
+    --text-secondary: #8b949e;
     --accent: #fb7185;
+    --accent-hover: #f43f5e;
+    --accent-subtle: rgba(251, 113, 133, 0.12);
+    --accent-border: rgba(251, 113, 133, 0.28);
   }
 
   html.amoled {
     --bg-canvas: #000000;
     --bg-surface: #0a0a0c;
-    --bg-surface-elevated: #121216;
-    --border-subtle: #27272a;
+    --bg-surface-elevated: #121214;
+    --border-subtle: #222226;
+    --border-strong: #333338;
     --text-primary: #ffffff;
-    --text-secondary: #a1a1aa;
+    --text-secondary: #9e9ea7;
     --accent: #ff6b8b;
+    --accent-hover: #fb7185;
+    --accent-subtle: rgba(255, 107, 139, 0.14);
+    --accent-border: rgba(255, 107, 139, 0.32);
   }
 
   body {
     background-color: var(--bg-canvas);
     color: var(--text-primary);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.011em;
   }
 }
 
-/* Hairline precision borders */
+/* Precision hairline borders & surfaces */
 .border-hairline {
   border-width: 1px;
   border-color: var(--border-subtle);
+}
+
+.border-strong {
+  border-width: 1px;
+  border-color: var(--border-strong);
 }
 
 .bg-canvas {
@@ -68,4 +88,94 @@
 
 .border-subtle {
   border-color: var(--border-subtle);
+}
+
+/* Linear-style Craft Utilities */
+.craft-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.craft-card:hover {
+  border-color: var(--border-strong);
+}
+
+.craft-input {
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.craft-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.craft-btn-primary {
+  background-color: var(--accent);
+  color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  transition: opacity 0.15s ease, transform 0.05s ease;
+}
+
+.craft-btn-primary:hover {
+  opacity: 0.94;
+}
+
+.craft-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.craft-btn-secondary {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.craft-btn-secondary:hover {
+  background-color: var(--bg-surface-elevated);
+  border-color: var(--border-strong);
+}
+
+/* Custom minimal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }

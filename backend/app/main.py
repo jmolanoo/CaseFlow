@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
-from app.routers import auth, ai_vault, help_desks
+from app.routers import auth, ai_vault, help_desks, tickets, ai_context
 
 # Initialize tables
 Base.metadata.create_all(bind=engine)
@@ -29,6 +29,8 @@ app.add_middleware(
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(ai_vault.router, prefix=settings.API_V1_STR)
 app.include_router(help_desks.router, prefix=settings.API_V1_STR)
+app.include_router(tickets.router, prefix=settings.API_V1_STR)
+app.include_router(ai_context.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():
@@ -44,7 +46,7 @@ def root():
 def health_check():
     return {
         "status": "ok",
-        "timestamp": "2026-11-03T13:57:00Z",
+        "timestamp": "2026-11-03T17:05:00Z",
         "service": "CaseFlow REST Engine",
         "version": "1.0.0"
     }

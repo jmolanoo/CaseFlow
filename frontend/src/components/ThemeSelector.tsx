@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, Sparkles } from 'lucide-react';
+import { Sun, Moon, CircleDot } from 'lucide-react';
 import { ThemeMode } from '../api';
 
 interface ThemeSelectorProps {
@@ -9,13 +9,14 @@ interface ThemeSelectorProps {
 
 export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ currentTheme, onThemeChange }) => {
   return (
-    <div className="flex items-center p-1 bg-surface rounded-full border border-hairline transition-all">
+    <div className="flex items-center p-0.5 bg-surface rounded-lg border border-hairline transition-all">
       <button
+        type="button"
         onClick={() => onThemeChange('light')}
-        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
           currentTheme === 'light'
-            ? 'bg-white text-zinc-950 shadow-sm border border-zinc-200'
-            : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+            ? 'bg-white text-zinc-950 border border-zinc-200'
+            : 'text-secondary hover:text-primary'
         }`}
         title="Modo Claro"
       >
@@ -24,11 +25,12 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ currentTheme, onTh
       </button>
 
       <button
+        type="button"
         onClick={() => onThemeChange('dark')}
-        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
           currentTheme === 'dark'
-            ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700'
-            : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+            ? 'bg-zinc-800 text-white border border-zinc-700'
+            : 'text-secondary hover:text-primary'
         }`}
         title="Modo Oscuro"
       >
@@ -37,16 +39,17 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ currentTheme, onTh
       </button>
 
       <button
+        type="button"
         onClick={() => onThemeChange('amoled')}
-        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
           currentTheme === 'amoled'
-            ? 'bg-rose-500/20 text-rose-400 shadow-sm border border-rose-500/30'
-            : 'text-zinc-500 hover:text-rose-400'
+            ? 'bg-black text-rose-400 border border-rose-500/40'
+            : 'text-secondary hover:text-rose-400'
         }`}
-        title="Modo Oscuro AMOLED (Negro Puro)"
+        title="Modo Oscuro AMOLED (Negro Puro #000000)"
       >
-        <Sparkles className="w-3.5 h-3.5 text-rose-500" />
-        <span className="hidden sm:inline">AMOLED</span>
+        <CircleDot className="w-3.5 h-3.5 text-rose-500" />
+        <span className="hidden sm:inline font-mono text-[11px]">AMOLED</span>
       </button>
     </div>
   );

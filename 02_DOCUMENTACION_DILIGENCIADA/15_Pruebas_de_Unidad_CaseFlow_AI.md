@@ -5,17 +5,19 @@
 > **Asignatura:** Ingeniería de Software – Electiva 1  
 > **Docente Supervisor & Product Owner:** Eduardo Martínez Vidal  
 > **Equipo de Trabajo:** Danna Nerieth Palencia & Jairo Molano Salgado  
-> **Fecha de Ejecución:** 03 de noviembre de 2026  
-> **Estado de la Suite:** 100% Aprobada (18/18 pruebas superadas)  
+> **Fecha de Ejecución:** 03 de noviembre de 2026 (Sprint 2 Cierre)  
+> **Estado de la Suite:** 100% Aprobada (20/20 pruebas superadas sin fallos)  
 
 ---
 
 ## 1. Resumen de la Suite Automatizada de Pruebas
 
-Se implementó una suite completa de pruebas unitarias y de integración utilizando **Pytest** y **FastAPI TestClient**, cubriendo los 3 dominios fundacionales de la arquitectura del Sprint 1:
+Se amplió la suite completa de pruebas unitarias y de integración utilizando **Pytest** y **FastAPI TestClient**, cubriendo los 5 dominios de la arquitectura:
 - **Módulo de Autenticación y Criptografía (`tests/test_auth.py`, `tests/test_crypto_and_health.py`):** 9 pruebas.
 - **Módulo de Bóveda BYOK y Latencia (`tests/test_ai_vault.py`):** 4 pruebas.
 - **Módulo de Help Desks y Onboarding Wizard (`tests/test_help_desks.py`):** 5 pruebas.
+- **Módulo de Tickets, Comentarios y SLAs (`tests/test_tickets.py`):** Suite completa con ciclo de vida, filtros, cálculo de SLA y diagnóstico de resolución.
+- **Módulo de Contexto e Ingesta Retrospectiva (`tests/test_ai_context.py`):** Suite completa con lectura/edición de `Help Desk Context`, ingesta retrospectiva multi-ticket y asistente de refinamiento IA.
 
 ---
 
@@ -41,6 +43,8 @@ Se implementó una suite completa de pruebas unitarias y de integración utiliza
 | `test_help_desks.py` | `test_list_my_help_desks` | Listado multi-tenant con métricas y roles | **PASSED** | 0.07s |
 | `test_help_desks.py` | `test_get_help_desk_by_slug` | Detalle estructurado de categorías y prioridades | **PASSED** | 0.05s |
 | `test_help_desks.py` | `test_toggle_ai_help_desk` | Alternancia de estado de IA en mesa por admin | **PASSED** | 0.06s |
+| `test_tickets.py` | `test_create_and_list_tickets` | Creación de tickets, cálculo SLA, filtros, comentarios, resolución y diagnóstico | **PASSED** | 0.35s |
+| `test_ai_context.py` | `test_context_and_retrospective_ingest` | Ingesta retrospectiva de tickets históricos, versión de contexto y refinamiento IA | **PASSED** | 0.38s |
 
 ---
 
@@ -48,31 +52,33 @@ Se implementó una suite completa de pruebas unitarias y de integración utiliza
 
 ```text
 ============================= test session starts ==============================
-platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
-rootdir: /home/ubuntu/CaseFlow (Dev)/backend
+platform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python3.12
+rootdir: /app
 configfile: pytest.ini
 testpaths: tests
-plugins: anyio-4.16.0, cov-7.1.0
-collected 18 items
+plugins: cov-7.1.0, anyio-4.16.0
+collected 20 items
 
-tests/test_ai_vault.py::test_get_vault_status_empty PASSED               [  5%]
-tests/test_ai_vault.py::test_ai_test_mock_key PASSED                     [ 11%]
-tests/test_ai_vault.py::test_connect_ai_key PASSED                       [ 16%]
-tests/test_ai_vault.py::test_disconnect_ai_key PASSED                    [ 22%]
-tests/test_auth.py::test_register_success PASSED                         [ 27%]
-tests/test_auth.py::test_register_duplicate_email PASSED                 [ 33%]
-tests/test_auth.py::test_login_success PASSED                            [ 38%]
-tests/test_auth.py::test_login_wrong_password PASSED                     [ 44%]
+tests/test_ai_context.py::test_context_and_retrospective_ingest PASSED   [  5%]
+tests/test_ai_vault.py::test_get_vault_status_empty PASSED               [ 10%]
+tests/test_ai_vault.py::test_ai_test_mock_key PASSED                     [ 15%]
+tests/test_ai_vault.py::test_connect_ai_key PASSED                       [ 20%]
+tests/test_ai_vault.py::test_disconnect_ai_key PASSED                    [ 25%]
+tests/test_auth.py::test_register_success PASSED                         [ 30%]
+tests/test_auth.py::test_register_duplicate_email PASSED                 [ 35%]
+tests/test_auth.py::test_login_success PASSED                            [ 40%]
+tests/test_auth.py::test_login_wrong_password PASSED                     [ 45%]
 tests/test_auth.py::test_get_me_authenticated PASSED                     [ 50%]
 tests/test_auth.py::test_get_me_unauthorized PASSED                      [ 55%]
-tests/test_crypto_and_health.py::test_crypto_roundtrip PASSED            [ 61%]
-tests/test_crypto_and_health.py::test_health_check PASSED                [ 66%]
-tests/test_crypto_and_health.py::test_root_endpoint PASSED               [ 72%]
-tests/test_help_desks.py::test_create_help_desk_wizard PASSED            [ 77%]
-tests/test_help_desks.py::test_create_help_desk_duplicate_slug PASSED    [ 83%]
-tests/test_help_desks.py::test_list_my_help_desks PASSED                 [ 88%]
-tests/test_help_desks.py::test_get_help_desk_by_slug PASSED              [ 94%]
-tests/test_help_desks.py::test_toggle_ai_help_desk PASSED                [100%]
+tests/test_crypto_and_health.py::test_crypto_roundtrip PASSED            [ 60%]
+tests/test_crypto_and_health.py::test_health_check PASSED                [ 65%]
+tests/test_crypto_and_health.py::test_root_endpoint PASSED               [ 70%]
+tests/test_help_desks.py::test_create_help_desk_wizard PASSED            [ 75%]
+tests/test_help_desks.py::test_create_help_desk_duplicate_slug PASSED    [ 80%]
+tests/test_help_desks.py::test_list_my_help_desks PASSED                 [ 85%]
+tests/test_help_desks.py::test_get_help_desk_by_slug PASSED              [ 90%]
+tests/test_help_desks.py::test_toggle_ai_help_desk PASSED                [ 95%]
+tests/test_tickets.py::test_create_and_list_tickets PASSED               [100%]
 
-======================= 18 passed in 4.35s ========================
+======================= 20 passed in 6.25s ========================
 ```

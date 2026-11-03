@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './components/LandingPage';
 import { Dashboard } from './components/Dashboard';
+import { WorkspaceView } from './components/WorkspaceView';
 import { AuthModal } from './components/AuthModal';
-import { api, ThemeMode, User, AIStatus } from './api';
+import { api, ThemeMode, User, AIStatus, HelpDeskListItem } from './api';
 
 export const App: React.FC = () => {
   // Theme state
@@ -15,6 +16,7 @@ export const App: React.FC = () => {
   // Auth & User state
   const [user, setUser] = useState<User | null>(null);
   const [aiStatus, setAIStatus] = useState<AIStatus | null>(null);
+  const [selectedDeskSlug, setSelectedDeskSlug] = useState<string | null>(null);
   const [authModal, setAuthModal] = useState<{ isOpen: boolean; tab: 'login' | 'register' }>({
     isOpen: false,
     tab: 'login',
@@ -63,6 +65,7 @@ export const App: React.FC = () => {
     localStorage.removeItem('caseflow_token');
     setUser(null);
     setAIStatus(null);
+    setSelectedDeskSlug(null);
   };
 
   const handleAuthSuccess = (loggedUser: User) => {
@@ -97,15 +100,25 @@ export const App: React.FC = () => {
         aiStatus={aiStatus}
         onOpenAuth={(tab) => setAuthModal({ isOpen: true, tab })}
         onLogout={handleLogout}
+        onLogoClick={() => setSelectedDeskSlug(null)}
       />
 
       <main>
         {user ? (
-          <Dashboard
-            user={user}
-            aiStatus={aiStatus}
-            onRefreshAIStatus={refreshAI}
-          />
+          selectedDeskSlug ? (
+            <WorkspaceView
+              slug={selectedDeskSlug}
+              aiStatus={aiStatus}
+              onBackToDashboard={() => setSelectedDeskSlug(null)}
+            />
+          ) : (
+            <Dashboard
+              user={user}
+              aiStatus={aiStatus}
+              onRefreshAIStatus={refreshAI}
+              onSelectDesk={(desk: HelpDeskListItem) => setSelectedDeskSlug(desk.slug)}
+            />
+          )
         ) : (
           <LandingPage onOpenAuth={(tab) => setAuthModal({ isOpen: true, tab })} />
         )}

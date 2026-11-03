@@ -126,3 +126,91 @@ class HelpDeskListItem(BaseModel):
     tickets_count: int
     sla_compliance_rate: float
     created_at: datetime.datetime
+
+# --- Ticket Schemas (Sprint 2) ---
+class TicketCreate(BaseModel):
+    title: str = Field(..., min_length=3, max_length=200)
+    description: str = Field(..., min_length=5)
+    category_id: Optional[int] = None
+    priority_id: Optional[int] = None
+
+class TicketStatusUpdate(BaseModel):
+    status: str = Field(..., pattern="^(open|in_progress|waiting|resolved|closed)$")
+    diagnostic: Optional[str] = None
+
+class TicketCommentCreate(BaseModel):
+    message: str = Field(..., min_length=1)
+    is_internal: bool = False
+
+class TicketCommentResponse(BaseModel):
+    id: int
+    ticket_id: int
+    user_id: int
+    user_name: str
+    message: str
+    is_internal: bool
+    created_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+class TicketResponse(BaseModel):
+    id: int
+    help_desk_id: int
+    ticket_code: str
+    title: str
+    description: str
+    status: str
+    category_id: Optional[int]
+    category_name: Optional[str]
+    priority_id: Optional[int]
+    priority_name: Optional[str]
+    priority_level: Optional[int]
+    requester_id: int
+    requester_name: str
+    assignee_id: Optional[int]
+    assignee_name: Optional[str]
+    created_at: datetime.datetime
+    resolved_at: Optional[datetime.datetime]
+    sla_resolution_hours: int = 24
+    sla_due_at: Optional[datetime.datetime] = None
+    comments_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+class TicketDetailResponse(TicketResponse):
+    comments: List[TicketCommentResponse] = []
+
+# --- AI Context Schemas (Sprint 2) ---
+class HelpDeskContextResponse(BaseModel):
+    id: int
+    help_desk_id: int
+    content: str
+    version: int
+    updated_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+class HelpDeskContextUpdate(BaseModel):
+    content: str = Field(..., min_length=10)
+
+class RetrospectiveIngestRequest(BaseModel):
+    guidelines: Optional[str] = None
+
+class RetrospectiveIngestResponse(BaseModel):
+    success: bool
+    processed_tickets: int
+    version: int
+    message: str
+    context_preview: str
+
+class AIRefineTicketRequest(BaseModel):
+    description: str = Field(..., min_length=5)
+
+class AIRefineTicketResponse(BaseModel):
+    suggested_title: str
+    suggested_category_id: Optional[int] = None
+    suggested_priority_id: Optional[int] = None
+    analysis: str

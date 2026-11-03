@@ -10,6 +10,7 @@ interface NavbarProps {
   aiStatus: AIStatus | null;
   onOpenAuth: (tab: 'login' | 'register') => void;
   onLogout: () => void;
+  onLogoClick?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -19,20 +20,24 @@ export const Navbar: React.FC<NavbarProps> = ({
   aiStatus,
   onOpenAuth,
   onLogout,
+  onLogoClick,
 }) => {
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-md bg-canvas/80 border-b border-hairline transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-50 backdrop-blur-md bg-canvas/90 border-b border-hairline transition-colors">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
         {/* Brand */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center text-white shadow-sm shadow-rose-500/20">
-            <Layers className="w-5 h-5" />
+        <div 
+          onClick={onLogoClick}
+          className="flex items-center gap-2.5 cursor-pointer select-none group"
+        >
+          <div className="w-8 h-8 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 amoled:bg-rose-500 amoled:text-white flex items-center justify-center font-bold transition-all">
+            <Layers className="w-4 h-4" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl font-bold tracking-tight text-primary font-sans">
+            <span className="text-base font-bold tracking-tight text-primary font-sans">
               Case<span className="text-rose-500">Flow</span>
             </span>
-            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
+            <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-surface border border-hairline text-secondary">
               v1.0.0
             </span>
           </div>
@@ -42,16 +47,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-3 sm:gap-4">
           {/* AI Connection status pill (if user is logged in) */}
           {user && (
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border border-hairline bg-surface">
+            <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-mono border border-hairline bg-surface">
               <span
                 className={`w-2 h-2 rounded-full ${
-                  aiStatus?.is_connected ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400'
+                  aiStatus?.is_connected ? 'bg-emerald-500' : 'bg-zinc-400'
                 }`}
               />
-              <span className="text-secondary">
+              <span className="text-secondary text-[11px]">
                 {aiStatus?.is_connected
                   ? `${aiStatus.provider?.toUpperCase()} • ${aiStatus.latency_ms}ms`
-                  : 'BYOK: Inactivo (Modo Manual)'}
+                  : 'BYOK: Inactivo'}
               </span>
             </div>
           )}
@@ -63,7 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {user ? (
             <div className="flex items-center gap-3 pl-2 border-l border-hairline">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-surface border border-hairline flex items-center justify-center text-primary text-xs font-semibold">
+                <div className="w-7 h-7 rounded-md bg-surface border border-hairline flex items-center justify-center text-primary text-xs font-mono font-semibold">
                   {user.full_name.charAt(0).toUpperCase()}
                 </div>
                 <div className="hidden sm:block text-left">
@@ -72,8 +77,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={onLogout}
-                className="p-1.5 rounded-lg text-secondary hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                className="p-1.5 rounded-md text-secondary hover:text-rose-500 hover:bg-surface border border-transparent hover:border-hairline transition-colors"
                 title="Cerrar Sesión"
               >
                 <LogOut className="w-4 h-4" />
@@ -82,14 +88,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => onOpenAuth('login')}
-                className="px-3.5 py-1.5 text-xs font-medium text-secondary hover:text-primary transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-secondary hover:text-primary transition-colors"
               >
                 Iniciar Sesión
               </button>
               <button
+                type="button"
                 onClick={() => onOpenAuth('register')}
-                className="px-4 py-1.5 text-xs font-medium rounded-lg bg-rose-500 hover:bg-rose-600 text-white transition-all shadow-sm shadow-rose-500/20"
+                className="craft-btn-primary"
               >
                 Registrarse
               </button>

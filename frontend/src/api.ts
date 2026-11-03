@@ -64,6 +64,66 @@ export interface HelpDeskDetails {
   user_role: string;
 }
 
+export interface TicketComment {
+  id: number;
+  ticket_id: number;
+  user_id: number;
+  user_name: string;
+  message: string;
+  is_internal: boolean;
+  created_at: string;
+}
+
+export interface TicketItem {
+  id: number;
+  help_desk_id: number;
+  ticket_code: string;
+  title: string;
+  description: string;
+  status: 'open' | 'in_progress' | 'waiting' | 'resolved' | 'closed';
+  category_id: number | null;
+  category_name: string;
+  priority_id: number | null;
+  priority_name: string;
+  priority_level: number;
+  requester_id: number;
+  requester_name: string;
+  assignee_id: number | null;
+  assignee_name: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  sla_resolution_hours: number;
+  sla_due_at: string | null;
+  comments_count: number;
+}
+
+export interface TicketDetail extends TicketItem {
+  comments: TicketComment[];
+}
+
+export interface HelpDeskContextData {
+  id: number;
+  help_desk_id: number;
+  content: string;
+  version: number;
+  updated_at: string;
+}
+
+export interface RetrospectiveIngestResult {
+  success: boolean;
+  processed_tickets: number;
+  version: number;
+  message: string;
+  context_preview: string;
+}
+
+export interface AIRefineResult {
+  suggested_title: string;
+  suggested_category_id: number | null;
+  suggested_priority_id: number | null;
+  analysis: string;
+}
+
 const API_BASE = '/api';
 
 function getHeaders(token?: string | null): HeadersInit {
@@ -168,6 +228,14 @@ export const api = {
     return res.json();
   },
 
+  async getDeskDetails(slug: string): Promise<HelpDeskDetails> {
+    const res = await fetch(`${API_BASE}/desks/${slug}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al obtener detalles de la mesa');
+    return res.json();
+  },
+
   async createHelpDeskWizard(payload: {
     name: string;
     slug: string;
@@ -194,6 +262,111 @@ export const api = {
       headers: getHeaders(),
     });
     if (!res.ok) throw new Error('Error al alternar IA de la mesa');
+    return res.json();
+  },
+
+  // Tickets (Sprint 2)
+  async getTickets(slug: string, statusFilter?: string, categoryId?: number): Promise<TicketItem[]> {
+    const params = new URLSearchParams();
+    if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
+    if (categoryId) params.append('category_id', categoryId.toString());
+
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE}/desks/${slug}/tickets${qs}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al consultar tickets');
+    return res.json();
+  },
+
+  async createTicket(slug: string, data: {
+    title: string;
+    description: string;
+    category_id?: number | null;
+    priority_id?: number | null;
+  }): Promise<TicketItem> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/tickets`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error al crear ticket');
+    }
+    return res.json();
+  },
+
+  async getTicketDetail(slug: string, ticketCode: string): Promise<TicketDetail> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/tickets/${ticketCode}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al obtener detalle del ticket');
+    return res.json();
+  },
+
+  async updateTicketStatus(slug: string, ticketCode: string, statusVal: string, diagnostic?: string): Promise<TicketItem> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/tickets/${ticketCode}/status`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ status: statusVal, diagnostic }),
+    });
+    if (!res.ok) throw new Error('Error al actualizar estado del ticket');
+    return res.json();
+  },
+
+  async addTicketComment(slug: string, ticketCode: string, message: string, is_internal = false): Promise<TicketComment> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/tickets/${ticketCode}/comments`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ message, is_internal }),
+    });
+    if (!res.ok) throw new Error('Error al registrar comentario');
+    return res.json();
+  },
+
+  // Context & AI Retrospective (Sprint 2)
+  async getDeskContext(slug: string): Promise<HelpDeskContextData> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/context`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al consultar el Help Desk Context');
+    return res.json();
+  },
+
+  async updateDeskContext(slug: string, content: string): Promise<HelpDeskContextData> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/context`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ content }),
+    });
+    if (!res.ok) throw new Error('Error al actualizar la memoria del Help Desk');
+    return res.json();
+  },
+
+  async ingestDeskContext(slug: string, guidelines?: string): Promise<RetrospectiveIngestResult> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/context/ingest`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ guidelines }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error en la ingesta retrospectiva');
+    }
+    return res.json();
+  },
+
+  async refineTicketAI(slug: string, description: string): Promise<AIRefineResult> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/ai/refine-ticket`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ description }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Error en el asistente de refinamiento IA');
+    }
     return res.json();
   },
 };
