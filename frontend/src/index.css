@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-canvas: #ffffff;
+    --bg-surface: #f8f9fa;
+    --bg-surface-elevated: #ffffff;
+    --border-subtle: #e4e4e7;
+    --text-primary: #09090b;
+    --text-secondary: #71717a;
+    --accent: #f43f5e;
+  }
+
+  html.dark {
+    --bg-canvas: #0f1117;
+    --bg-surface: #161922;
+    --bg-surface-elevated: #1e2230;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+    --accent: #fb7185;
+  }
+
+  html.amoled {
+    --bg-canvas: #000000;
+    --bg-surface: #0a0a0c;
+    --bg-surface-elevated: #121216;
+    --border-subtle: #27272a;
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+    --accent: #ff6b8b;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+/* Hairline precision borders */
+.border-hairline {
+  border-width: 1px;
+  border-color: var(--border-subtle);
+}
+
+.bg-canvas {
+  background-color: var(--bg-canvas);
+}
+
+.bg-surface {
+  background-color: var(--bg-surface);
+}
+
+.bg-surface-elevated {
+  background-color: var(--bg-surface-elevated);
+}
+
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.border-subtle {
+  border-color: var(--border-subtle);
+}

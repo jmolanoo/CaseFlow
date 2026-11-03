@@ -1,0 +1,110 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" modified="2026-10-22T00:00:00.000Z" agent="ChatGPT" version="24.7.17" type="device">
+  <diagram id="uml-caseflow-v2" name="07 - Clases de dominio">
+    <mxGraphModel dx="1850" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2350" pageHeight="1580" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="2" value="CASEFLOW AI · DIAGRAMA DE CLASES UML" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=25;fontColor=#22324E;" vertex="1" parent="1">
+          <mxGeometry x="40" y="12" width="1500" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="Modelo de diseño propuesto · Arquitectura conceptual del dominio · No corresponde a código implementado verificado" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=14;fontColor=#22324E;" vertex="1" parent="1">
+          <mxGeometry x="40" y="59" width="1700" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="Identidad y acceso" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;fillColor=#E8F1FF;fillOpacity=10;strokeColor=#CBD5E1;dashed=1;verticalAlign=top;align=left;spacingTop=9;spacingLeft=12;fontSize=16;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="35" y="105" width="530" height="425" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="Gestión de solicitudes" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;fillColor=#E8F6EF;fillOpacity=10;strokeColor=#CBD5E1;dashed=1;verticalAlign=top;align=left;spacingTop=9;spacingLeft=12;fontSize=16;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="585" y="105" width="1140" height="815" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="Atención técnica" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;fillColor=#FFF3E6;fillOpacity=10;strokeColor=#CBD5E1;dashed=1;verticalAlign=top;align=left;spacingTop=9;spacingLeft=12;fontSize=16;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="35" y="550" width="530" height="555" as="geometry" />
+        </mxCell>
+        <mxCell id="7" value="Analítica e informes" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;fillColor=#F3E9FD;fillOpacity=10;strokeColor=#CBD5E1;dashed=1;verticalAlign=top;align=left;spacingTop=9;spacingLeft=12;fontSize=16;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="35" y="1125" width="860" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="8" value="Asistencia IA (simulada)" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;fillColor=#E8F8FB;fillOpacity=10;strokeColor=#CBD5E1;dashed=1;verticalAlign=top;align=left;spacingTop=9;spacingLeft=12;fontSize=16;fontStyle=1;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="930" y="960" width="795" height="465" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;Usuario&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- id: UUID&lt;br/&gt;- nombre: String&lt;br/&gt;- correo: String&lt;br/&gt;- dependencia: String&lt;br/&gt;- cargo: String&lt;br/&gt;- rol: RolUsuario&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ actualizarPerfil(): void&lt;br/&gt;+ cambiarClave(): void&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#E8F1FF;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="62" y="170" width="280" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="10" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;Sesion&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- id: UUID&lt;br/&gt;- usuarioId: UUID&lt;br/&gt;- fechaInicio: DateTime&lt;br/&gt;- activa: Boolean&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ cerrar(): void&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#E8F1FF;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="355" y="200" width="185" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="11" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;Categoria&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- id: UUID&lt;br/&gt;- nombre: String&lt;br/&gt;- descripcion: String&lt;br/&gt;- color: String&lt;br/&gt;- activa: Boolean&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ modificar(): void&lt;br/&gt;+ desactivar(): void&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#E8F6EF;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="625" y="175" width="288" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="12" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;Solicitud&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- id: UUID&lt;br/&gt;- codigo: String&lt;br/&gt;- titulo: String&lt;br/&gt;- descripcion: String&lt;br/&gt;- prioridad: Prioridad&lt;br/&gt;- estado: EstadoSolicitud&lt;br/&gt;- creadaEn: DateTime&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ editar(): void&lt;br/&gt;+ cambiarEstado(): void&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#E8F6EF;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="160" width="330" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="13" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;HistorialEstado&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- id: UUID&lt;br/&gt;- anterior: EstadoSolicitud&lt;br/&gt;- nuevo: EstadoSolicitud&lt;br/&gt;- cambiadoEn: DateTime&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ registrarCambio(): void&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#E8F6EF;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="1440" y="185" width="260" height="205" as="geometry" />
+        </mxCell>
+        <mxCell id="14" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;Respuesta&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- id: UUID&lt;br/&gt;- solicitudId: UUID&lt;br/&gt;- autorId: UUID&lt;br/&gt;- contenido: String&lt;br/&gt;- creadaEn: DateTime&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ registrar(): void&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#E8F6EF;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="650" y="560" width="285" height="205" as="geometry" />
+        </mxCell>
+        <mxCell id="15" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;DiagnosticoTecnico&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- id: UUID&lt;br/&gt;- solicitudId: UUID&lt;br/&gt;- tecnicoId: UUID&lt;br/&gt;- causaRaiz: String&lt;br/&gt;- solucionAplicada: String&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ guardar(): void&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#FFF3E6;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="1035" y="550" width="300" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="16" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;Notificacion&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- id: UUID&lt;br/&gt;- usuarioId: UUID&lt;br/&gt;- mensaje: String&lt;br/&gt;- tipo: String&lt;br/&gt;- creadaEn: DateTime&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ mostrar(): void&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#FFF3E6;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="80" y="660" width="300" height="215" as="geometry" />
+        </mxCell>
+        <mxCell id="17" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;MetricaOperativa&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- pendientes: Integer&lt;br/&gt;- enProceso: Integer&lt;br/&gt;- resueltas: Integer&lt;br/&gt;- cerradas: Integer&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ calcularDistribucion(): void&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#F3E9FD;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1185" width="310" height="195" as="geometry" />
+        </mxCell>
+        <mxCell id="18" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;Informe&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- fechaInicio: Date&lt;br/&gt;- fechaFin: Date&lt;br/&gt;- categoriaId: UUID?&lt;br/&gt;- estado: EstadoSolicitud?&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ generar(): void&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#F3E9FD;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="525" y="1185" width="315" height="195" as="geometry" />
+        </mxCell>
+        <mxCell id="19" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;AsistenciaIA&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- modo: String = simulado&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ estructurarSolicitud(): PropuestaIA&lt;br/&gt;+ sugerirRespuesta(): String&lt;br/&gt;+ sugerirDiagnostico(): String&lt;br/&gt;+ sugerirCategoria(): String&lt;br/&gt;+ evaluarIndicadores(): String&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#E8F8FB;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="970" y="1025" width="350" height="295" as="geometry" />
+        </mxCell>
+        <mxCell id="20" value="&lt;div style=&quot;font-size:15px;font-weight:bold;text-align:center&quot;&gt;PropuestaIA&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;- tituloSugerido: String&lt;br/&gt;- categoriaSugerida: String&lt;br/&gt;- prioridadSugerida: Prioridad&lt;br/&gt;- listaChequeo: String[]&lt;/div&gt;&lt;hr/&gt;&lt;div style=&quot;text-align:left;font-size:12px&quot;&gt;+ aplicar(): void&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;spacingTop=8;spacingLeft=9;spacingRight=8;fillColor=#E8F8FB;strokeColor=#64748B;strokeWidth=1.4;fontColor=#14233A;overflow=fill;" vertex="1" parent="1">
+          <mxGeometry x="1375" y="1050" width="315" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="21" value="1  —  0..*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="9" target="10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="22" value="solicitante: 1  —  0..*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="9" target="12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="23" value="1  —  0..*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="11" target="12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="24" value="1  —  0..*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="12" target="13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="25" value="1  —  0..*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="12" target="14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="26" value="1  —  0..1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="12" target="15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="27" value="autor: 1  —  0..*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="9" target="14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="28" value="técnico: 1  —  0..*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="9" target="15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="29" value="1  —  0..*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="9" target="16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="30" value="agregación de datos" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1" parent="1" source="17" target="18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="31" value="crea sugerencia" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1" parent="1" source="19" target="20">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="32" value="asiste / no persiste" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;strokeColor=#52647E;strokeWidth=1.8;fontSize=12;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1" parent="1" source="19" target="12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="33" value="Enumeraciones: RolUsuario {REGULAR, SOPORTE} · EstadoSolicitud {PENDIENTE, EN_PROCESO, RESUELTA, CERRADA} · Prioridad {BAJA, MEDIA, ALTA}" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=13;fontColor=#22324E;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1450" width="1860" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="34" value="Convención: línea continua = asociación del dominio · línea discontinua = dependencia/servicio · Las cardinalidades representan el modelo propuesto." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontColor=#22324E;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1504" width="1860" height="36" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
