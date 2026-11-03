@@ -85,8 +85,11 @@ export const App: React.FC = () => {
 
   if (initializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-canvas text-secondary font-mono text-xs">
-        Iniciando CaseFlow v1.0.0...
+      <div className="min-h-screen flex items-center justify-center bg-canvas text-secondary text-xs">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+          <span className="font-semibold tracking-wide text-primary">Iniciando CaseFlow...</span>
+        </div>
       </div>
     );
   }

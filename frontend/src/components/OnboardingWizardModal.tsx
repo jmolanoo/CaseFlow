@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  X, Check, ArrowRight, ArrowLeft, Plus, Trash2, Layers
+  X, Check, ArrowRight, ArrowLeft, Plus, Trash2
 } from 'lucide-react';
 import { api, Category, Priority, HelpDeskDetails } from '../api';
 
@@ -81,100 +81,102 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
       onSuccess(res);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Error al crear Help Desk');
+      setError(err.message || 'Error al crear la mesa de ayuda');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="relative w-full max-w-xl rounded-xl border border-hairline bg-surface p-6 transition-all">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-xl rounded-2xl border border-hairline bg-surface p-7 shadow-2xl transition-all">
         {/* Top Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-hairline">
+        <div className="flex items-center justify-between pb-4 border-b border-hairline">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-surface border border-hairline text-rose-500">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-surface border border-hairline text-rose-500">
                 Paso {step} de 4
               </span>
               <h3 className="text-sm font-bold text-primary">
                 {step === 1 && 'Identidad de la Mesa de Ayuda'}
-                {step === 2 && 'Catálogo de Categorías y Servicios'}
-                {step === 3 && 'Matriz de Prioridades y Políticas de SLA'}
+                {step === 2 && 'Catálogo de Categorías de Servicio'}
+                {step === 3 && 'Tiempos de Respuesta y Acuerdos de Nivel (SLA)'}
                 {step === 4 && 'Confirmación y Despliegue'}
               </h3>
             </div>
-            <p className="text-xs text-secondary mt-0.5">
-              Configuración modular guiada (Onboarding Wizard autónomo).
+            <p className="text-xs text-secondary mt-1">
+              Asistente de configuración guiado para poner en marcha tu mesa de soporte.
             </p>
           </div>
           <button 
             type="button" 
             onClick={onClose} 
-            className="p-1 rounded-md text-secondary hover:text-primary hover:bg-canvas transition-colors"
+            className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-canvas cursor-pointer transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-3 p-2.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs">
+          <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs">
             {error}
           </div>
         )}
 
         {/* Step 1: Identity */}
         {step === 1 && (
-          <div className="space-y-3.5 py-4">
+          <div className="space-y-4 py-4">
             <div>
-              <label className="block text-[11px] font-medium text-secondary mb-1">
-                Nombre de la Mesa de Ayuda / Departamento
+              <label className="block text-xs font-semibold text-secondary mb-1.5">
+                Nombre de la Mesa de Ayuda
               </label>
               <input
                 type="text"
+                required
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="Ej. Centro de Soporte TI"
-                className="craft-input w-full"
+                placeholder="ej. Soporte Técnico Regional, Atención Clientes VIP"
+                className="craft-input w-full text-xs"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-secondary mb-1">
-                Slug Identificador Único (URL amigable)
+              <label className="block text-xs font-semibold text-secondary mb-1.5">
+                Identificador de Acceso (URL)
               </label>
-              <div className="flex items-center">
-                <span className="px-2.5 py-2 bg-canvas border border-r-0 border-hairline text-secondary text-xs font-mono rounded-l-md">
+              <div className="relative flex items-center">
+                <span className="absolute left-3 text-xs text-secondary pointer-events-none">
                   caseflow.app/
                 </span>
                 <input
                   type="text"
+                  required
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
-                  placeholder="soporte-ti"
-                  className="craft-input flex-1 rounded-l-none font-mono"
+                  placeholder="soporte-regional"
+                  className="craft-input w-full text-xs pl-28"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-secondary mb-1">
-                Descripción de Alcance
+              <label className="block text-xs font-semibold text-secondary mb-1.5">
+                Descripción del Servicio
               </label>
               <textarea
                 rows={2}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Canal oficial para atención de incidencias técnicas de la organización..."
-                className="craft-input w-full"
+                placeholder="Describe el propósito y alcance de atención de esta mesa..."
+                className="craft-input w-full text-xs"
               />
             </div>
 
-            <div className="pt-2 flex items-center justify-between p-3 rounded-lg bg-canvas border border-hairline">
+            <div className="p-3.5 rounded-xl bg-canvas border border-hairline flex items-center justify-between shadow-xs">
               <div>
-                <span className="text-xs font-semibold text-primary block">Habilitar IA en esta mesa</span>
+                <span className="text-xs font-bold text-primary block">Habilitar Asistencia con Inteligencia Artificial</span>
                 <span className="text-[11px] text-secondary">
-                  Si activas esta opción, podrás usar el Copiloto BYOK cuando vincules tu API Key.
+                  Permite sugerencias automáticas de diagnóstico y clasificación inteligente.
                 </span>
               </div>
               <input
@@ -189,31 +191,44 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
 
         {/* Step 2: Categories */}
         {step === 2 && (
-          <div className="space-y-3 py-4">
+          <div className="space-y-4 py-4">
             <p className="text-xs text-secondary">
-              Estructura las categorías para tipificar los casos que ingresen a esta mesa.
+              Configura los temas o tipos de solicitud que tus usuarios podrán reportar.
             </p>
 
-            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-              {categories.map((cat, idx) => (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                placeholder="ej. Facturación & Pagos"
+                className="craft-input flex-1 text-xs"
+              />
+              <button
+                type="button"
+                onClick={addCategory}
+                className="craft-btn-secondary text-xs shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Añadir
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {categories.map((cat, i) => (
                 <div
-                  key={idx}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-canvas border border-hairline text-xs"
+                  key={i}
+                  className="p-3 rounded-xl bg-canvas border border-hairline flex items-center justify-between text-xs shadow-xs"
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-surface border border-hairline flex items-center justify-center text-primary">
-                      <Layers className="w-3.5 h-3.5 text-rose-500" />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-primary block">{cat.name}</span>
-                      <span className="text-[11px] text-secondary">{cat.description}</span>
-                    </div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                    <span className="font-semibold text-primary">{cat.name}</span>
                   </div>
                   {categories.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => removeCategory(idx)}
-                      className="p-1 text-secondary hover:text-rose-500 rounded"
+                      onClick={() => removeCategory(i)}
+                      className="text-secondary hover:text-rose-500 p-1 rounded-md transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -221,64 +236,45 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
                 </div>
               ))}
             </div>
-
-            <div className="flex gap-2 pt-2">
-              <input
-                type="text"
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                placeholder="Nombre de nueva categoría..."
-                className="craft-input flex-1 text-xs"
-                onKeyDown={(e) => e.key === 'Enter' && addCategory()}
-              />
-              <button
-                type="button"
-                onClick={addCategory}
-                className="craft-btn-secondary text-xs"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Agregar
-              </button>
-            </div>
           </div>
         )}
 
-        {/* Step 3: SLA Matrix */}
+        {/* Step 3: Priorities and SLAs */}
         {step === 3 && (
-          <div className="space-y-2.5 py-4 max-h-64 overflow-y-auto pr-1">
+          <div className="space-y-3.5 py-4 max-h-64 overflow-y-auto pr-1">
             <p className="text-xs text-secondary mb-2">
-              Define los límites de tiempo (SLA) para primera respuesta y resolución definitiva.
+              Define los tiempos máximos tolerables de primera respuesta y resolución definitiva.
             </p>
 
             {priorities.map((p, i) => (
-              <div key={i} className="p-3 rounded-lg bg-canvas border border-hairline">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-xs text-primary">{p.name}</span>
-                  <span className="font-mono text-[11px] text-secondary">
-                    Nivel {p.level} • SLA: {p.sla_response_hours}h resp / {p.sla_resolution_hours}h resol
+              <div key={i} className="p-3.5 rounded-xl bg-canvas border border-hairline shadow-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-bold text-xs text-primary">{p.name} (Nivel {p.level})</span>
+                  <span className="text-[11px] text-secondary">
+                    Respuesta: {p.sla_response_hours}h • Resolución: {p.sla_resolution_hours}h
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2.5 mt-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] text-secondary block mb-0.5">Límite Respuesta (Horas)</label>
+                    <label className="text-[10px] text-secondary font-medium block mb-1">Respuesta Inicial (Horas)</label>
                     <input
                       type="number"
                       min={1}
                       max={168}
                       value={p.sla_response_hours}
                       onChange={(e) => updatePrioritySLA(i, 'sla_response_hours', parseInt(e.target.value) || 1)}
-                      className="craft-input w-full text-xs font-mono py-1"
+                      className="craft-input w-full text-xs py-1"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-secondary block mb-0.5">Límite Resolución (Horas)</label>
+                    <label className="text-[10px] text-secondary font-medium block mb-1">Resolución Final (Horas)</label>
                     <input
                       type="number"
                       min={1}
                       max={720}
                       value={p.sla_resolution_hours}
                       onChange={(e) => updatePrioritySLA(i, 'sla_resolution_hours', parseInt(e.target.value) || 1)}
-                      className="craft-input w-full text-xs font-mono py-1"
+                      className="craft-input w-full text-xs py-1"
                     />
                   </div>
                 </div>
@@ -289,36 +285,36 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
 
         {/* Step 4: Summary */}
         {step === 4 && (
-          <div className="space-y-3 py-4 text-xs">
-            <div className="p-3 rounded-lg bg-canvas border border-hairline">
-              <span className="text-[10px] font-mono text-secondary uppercase block">Mesa de Ayuda</span>
-              <span className="text-sm font-bold text-primary block mt-0.5">{name}</span>
-              <span className="text-[11px] font-mono text-rose-500">/{slug}</span>
-              <p className="text-secondary mt-1 text-[11px]">{description || 'Sin descripción adicional.'}</p>
+          <div className="space-y-3.5 py-4 text-xs">
+            <div className="p-4 rounded-xl bg-canvas border border-hairline shadow-xs">
+              <span className="text-[10px] text-secondary uppercase font-bold tracking-wider block">Mesa de Ayuda</span>
+              <span className="text-base font-bold text-primary block mt-1">{name}</span>
+              <span className="text-xs text-rose-500 font-semibold">/{slug}</span>
+              <p className="text-secondary mt-1.5 text-xs">{description || 'Mesa de soporte y atención.'}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="p-2.5 rounded-lg bg-canvas border border-hairline">
-                <span className="text-[10px] font-mono text-secondary uppercase block">Categorías</span>
-                <span className="text-xs font-bold text-primary mt-0.5 block">{categories.length} configuradas</span>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-canvas border border-hairline shadow-xs">
+                <span className="text-[10px] text-secondary uppercase font-bold tracking-wider block">Categorías</span>
+                <span className="text-sm font-bold text-primary mt-0.5 block">{categories.length} configuradas</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-canvas border border-hairline">
-                <span className="text-[10px] font-mono text-secondary uppercase block">Políticas SLA</span>
-                <span className="text-xs font-bold text-primary mt-0.5 block">{priorities.length} niveles activos</span>
+              <div className="p-3 rounded-xl bg-canvas border border-hairline shadow-xs">
+                <span className="text-[10px] text-secondary uppercase font-bold tracking-wider block">Políticas de SLA</span>
+                <span className="text-sm font-bold text-primary mt-0.5 block">{priorities.length} niveles activos</span>
               </div>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[11px] flex items-center gap-2">
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs flex items-center gap-2.5">
               <Check className="w-4 h-4 shrink-0" />
               <span>
-                Listo para desplegar. Se inicializará la memoria del Help Desk y los controles RBAC.
+                Todo listo para poner en marcha. Se inicializará la memoria del Help Desk y los controles de acceso.
               </span>
             </div>
           </div>
         )}
 
         {/* Footer Navigation */}
-        <div className="flex items-center justify-between pt-3 border-t border-hairline mt-2">
+        <div className="flex items-center justify-between pt-4 border-t border-hairline mt-3">
           {step > 1 ? (
             <button
               type="button"
