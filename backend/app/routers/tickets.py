@@ -101,8 +101,8 @@ def create_ticket(
         prio_id = default_prio.id if default_prio else None
 
     # Generate sequential unique ticket code
-    total_tickets = db.query(Ticket).filter(Ticket.help_desk_id == desk.id).count()
-    ticket_code = f"CASE-{desk.id * 100 + total_tickets + 1}"
+    count = db.query(Ticket).filter(Ticket.help_desk_id == desk.id).count() + 1
+    ticket_code = f"CASE-{count:03d}"
 
     ticket = Ticket(
         help_desk_id=desk.id,
@@ -133,6 +133,10 @@ def list_tickets(
 ):
     desk, member = get_membership(slug, current_user.id, db)
     query = db.query(Ticket).filter(Ticket.help_desk_id == desk.id)
+
+    # Role-based restriction: Requesters ONLY see their own tickets
+    if member.role == "requester":
+        query = query.filter(Ticket.requester_id == current_user.id)
 
     if status_filter and status_filter != "all":
         query = query.filter(Ticket.status == status_filter)
@@ -185,6 +189,13 @@ def get_ticket_detail(
             detail=f"Ticket '{ticket_code}' no encontrado"
         )
 
+    # Role-based restriction: Requesters can only access their own tickets
+    if member.role == "requester" and ticket.requester_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para ver los detalles de este caso"
+        )
+
     base_resp = map_ticket_response(ticket, db)
 
     # Fetch comments
@@ -194,6 +205,10 @@ def get_ticket_detail(
 
     comments = []
     for c in raw_comments:
+        # Requesters CANNOT view internal notes!
+        if member.role == "requester" and c.is_internal:
+            continue
+
         c_user = db.query(User).filter(User.id == c.user_id).first()
         comments.append(TicketCommentResponse(
             id=c.id,
@@ -226,6 +241,19 @@ def update_ticket_status(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
 
+    # Role check:
+    # Requesters can only close their own tickets (confirm resolution)
+    if member.role == "requester":
+        if ticket.requester_id != current_user.id:
+            raise HTTPException(status_code=403, detail="No puedes modificar el estado de un caso ajeno")
+        if payload.status not in ["closed", "resolved"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Los solicitantes únicamente pueden dar por cerrado o conforme su propio caso"
+            )
+        # Requesters cannot inject diagnostic learning
+        payload.diagnostic = None
+
     ticket.status = payload.status
 
     if payload.status in ["resolved", "closed"] and not ticket.resolved_at:
@@ -235,7 +263,7 @@ def update_ticket_status(
 
     # If diagnostic note provided, record as internal resolution comment
     # and dynamic learning in HelpDeskContext (Sprint 3 requirement)
-    if payload.diagnostic:
+    if payload.diagnostic and member.role in ["admin", "agent"]:
         diag_comment = TicketComment(
             ticket_id=ticket.id,
             user_id=current_user.id,
@@ -279,6 +307,12 @@ def assign_ticket(
     db: Session = Depends(get_db)
 ):
     desk, member = get_membership(slug, current_user.id, db)
+    if member.role not in ["admin", "agent"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo los miembros del equipo de soporte o administradores pueden asignar o reasignar casos"
+        )
+
     ticket = db.query(Ticket).filter(
         Ticket.help_desk_id == desk.id,
         Ticket.ticket_code == ticket_code
@@ -319,11 +353,18 @@ def add_ticket_comment(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
 
+    # Role checks
+    is_internal = payload.is_internal
+    if member.role == "requester":
+        if ticket.requester_id != current_user.id:
+            raise HTTPException(status_code=403, detail="No puedes comentar en un caso ajeno")
+        is_internal = False  # Requesters cannot make internal notes
+
     comment = TicketComment(
         ticket_id=ticket.id,
         user_id=current_user.id,
         message=payload.message,
-        is_internal=payload.is_internal,
+        is_internal=is_internal,
         created_at=datetime.datetime.utcnow()
     )
     db.add(comment)

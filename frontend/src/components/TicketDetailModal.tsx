@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Clock, Send, User, 
   MessageSquare, AlertCircle, Sparkles, Activity, FileText, 
-  Check, CornerDownLeft, UserCheck, RefreshCw, CheckCircle2
+  Check, CornerDownLeft, UserCheck, RefreshCw, CheckCircle2, Lock
 } from 'lucide-react';
 import { 
   api, TicketDetail, CopilotSuggestion, 
@@ -13,6 +13,7 @@ interface TicketDetailModalProps {
   slug: string;
   ticketCode: string;
   currentUser?: { id: number; full_name: string } | null;
+  userRole?: string;
   onClose: () => void;
   onTicketUpdated: () => void;
 }
@@ -21,12 +22,14 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
   slug,
   ticketCode,
   currentUser,
+  userRole = 'requester',
   onClose,
   onTicketUpdated,
 }) => {
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
+  const [isInternalComment, setIsInternalComment] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [statusVal, setStatusVal] = useState<string>('open');
   const [diagnostic, setDiagnostic] = useState('');
@@ -42,6 +45,8 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
   const [diagnosis, setDiagnosis] = useState<CopilotDiagnosis | null>(null);
   const [summary, setSummary] = useState<CopilotSummary | null>(null);
   const [copilotFeedback, setCopilotFeedback] = useState<string | null>(null);
+
+  const isStaff = userRole === 'admin' || userRole === 'agent';
 
   const fetchDetail = async () => {
     setLoading(true);
@@ -62,7 +67,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
   }, [ticketCode]);
 
   const handleStatusChange = async (newStatus: string) => {
-    if (newStatus === 'resolved' && !diagnostic) {
+    if (isStaff && newStatus === 'resolved' && !diagnostic) {
       setShowDiagnosticField(true);
       setStatusVal(newStatus);
       return;
@@ -83,7 +88,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
   };
 
   const handleAssignToMe = async () => {
-    if (!currentUser) return;
+    if (!currentUser || !isStaff) return;
     setAssigning(true);
     try {
       await api.assignTicket(slug, ticketCode, currentUser.id);
@@ -102,8 +107,10 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
     setSubmittingComment(true);
 
     try {
-      await api.addTicketComment(slug, ticketCode, commentText.trim());
+      const sendInternal = isStaff ? isInternalComment : false;
+      await api.addTicketComment(slug, ticketCode, commentText.trim(), sendInternal);
       setCommentText('');
+      setIsInternalComment(false);
       fetchDetail();
       onTicketUpdated();
     } catch (err: any) {
@@ -113,8 +120,9 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
     }
   };
 
-  // Copilot triggers
+  // Copilot triggers (Staff only)
   const handleFetchSuggestion = async () => {
+    if (!isStaff) return;
     setCopilotLoading(true);
     setCopilotMode('suggestion');
     try {
@@ -129,6 +137,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
   };
 
   const handleFetchDiagnosis = async () => {
+    if (!isStaff) return;
     setCopilotLoading(true);
     setCopilotMode('diagnosis');
     try {
@@ -188,6 +197,14 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
 
   if (!ticket) return null;
 
+  const statusLabels: Record<string, string> = {
+    open: 'Abierto (En cola)',
+    in_progress: 'En Progreso',
+    waiting: 'En Espera de Información',
+    resolved: 'Resuelto y Cerrado',
+    closed: 'Cerrado',
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl border border-hairline bg-surface shadow-2xl overflow-hidden transition-all">
@@ -204,21 +221,24 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
               <span className="text-xs px-2.5 py-0.5 rounded-md bg-surface border border-hairline text-secondary uppercase font-semibold">
                 {ticket.priority_name}
               </span>
+
               {ticket.assignee_name ? (
                 <span className="text-xs px-2.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-500 font-semibold flex items-center gap-1">
                   <UserCheck className="w-3 h-3" />
                   {ticket.assignee_name}
                 </span>
               ) : (
-                <button
-                  type="button"
-                  disabled={assigning}
-                  onClick={handleAssignToMe}
-                  className="text-xs px-2.5 py-0.5 rounded-md bg-surface hover:bg-canvas border border-hairline text-secondary hover:text-primary font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                >
-                  <UserCheck className="w-3 h-3 text-rose-500" />
-                  {assigning ? 'Asignando...' : 'Tomar Caso (Asignarme)'}
-                </button>
+                isStaff && (
+                  <button
+                    type="button"
+                    disabled={assigning}
+                    onClick={handleAssignToMe}
+                    className="text-xs px-2.5 py-0.5 rounded-md bg-surface hover:bg-canvas border border-hairline text-secondary hover:text-primary font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <UserCheck className="w-3 h-3 text-rose-500" />
+                    {assigning ? 'Asignando...' : 'Tomar Caso (Asignarme)'}
+                  </button>
+                )
               )}
             </div>
             <h2 className="text-base font-bold text-primary leading-snug">
@@ -241,17 +261,45 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
           <div className="p-3.5 rounded-xl bg-canvas border border-hairline flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-secondary">Estado Actual:</span>
-              <select
-                value={statusVal}
-                disabled={updatingStatus}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                className="craft-input text-xs py-1 px-2.5 font-semibold cursor-pointer"
-              >
-                <option value="open">Abierto (En cola)</option>
-                <option value="in_progress">En Progreso</option>
-                <option value="waiting">En Espera de Información</option>
-                <option value="resolved">Resuelto y Cerrado</option>
-              </select>
+              
+              {isStaff ? (
+                <select
+                  value={statusVal}
+                  disabled={updatingStatus}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  className="craft-input text-xs py-1 px-2.5 font-semibold cursor-pointer"
+                >
+                  <option value="open">Abierto (En cola)</option>
+                  <option value="in_progress">En Progreso</option>
+                  <option value="waiting">En Espera de Información</option>
+                  <option value="resolved">Resuelto y Cerrado</option>
+                </select>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-1 rounded-md text-xs font-bold border ${
+                    ticket.status === 'resolved' || ticket.status === 'closed'
+                      ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                      : ticket.status === 'in_progress'
+                      ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                      : 'bg-zinc-500/10 text-secondary border-hairline'
+                  }`}>
+                    {statusLabels[ticket.status] || ticket.status}
+                  </span>
+
+                  {ticket.status !== 'resolved' && ticket.status !== 'closed' && (
+                    <button
+                      type="button"
+                      disabled={updatingStatus}
+                      onClick={() => handleStatusChange('closed')}
+                      className="craft-btn-secondary text-xs py-1 px-2.5 text-emerald-600 dark:text-emerald-400 hover:border-emerald-500/30"
+                      title="Confirmar conformidad y cerrar mi caso"
+                    >
+                      <Check className="w-3 h-3 text-emerald-500 inline mr-1" />
+                      Dar por Resuelto
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-4 text-xs text-secondary font-medium">
@@ -265,8 +313,8 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Diagnostic Note Prompt if resolving */}
-          {showDiagnosticField && (
+          {/* Diagnostic Note Prompt if resolving (Staff only) */}
+          {isStaff && showDiagnosticField && (
             <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-2.5 shadow-xs">
               <span className="text-xs font-bold text-rose-500 block">
                 Diagnóstico de Cierre y Aprendizaje Activo:
@@ -322,177 +370,179 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Sprint 3: Copilot Action Bar */}
-          <div className="rounded-xl border border-hairline bg-canvas p-4 space-y-3 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500">
-                  <Sparkles className="w-3.5 h-3.5" />
+          {/* Staff-only: Copilot Action Bar */}
+          {isStaff && (
+            <div className="rounded-xl border border-hairline bg-canvas p-4 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-xs font-bold text-primary">
+                    Copiloto de Soporte Asistido
+                  </span>
                 </div>
-                <span className="text-xs font-bold text-primary">
-                  Copiloto de Soporte Asistido
+                <span className="text-[11px] text-secondary">
+                  Alimentado por la memoria viva del equipo
                 </span>
               </div>
-              <span className="text-[11px] text-secondary">
-                Alimentado por la memoria viva del equipo
-              </span>
-            </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={copilotLoading}
-                onClick={handleFetchSuggestion}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-150 border ${
-                  copilotMode === 'suggestion'
-                    ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
-                    : 'bg-surface border-hairline text-secondary hover:text-primary hover:border-rose-500/30'
-                }`}
-              >
-                <Sparkles className="w-3 h-3 text-rose-500" />
-                Sugerir Respuesta
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={copilotLoading}
+                  onClick={handleFetchSuggestion}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-150 border ${
+                    copilotMode === 'suggestion'
+                      ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
+                      : 'bg-surface border-hairline text-secondary hover:text-primary hover:border-rose-500/30'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-rose-500" />
+                  Sugerir Respuesta
+                </button>
 
-              <button
-                type="button"
-                disabled={copilotLoading}
-                onClick={handleFetchDiagnosis}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-150 border ${
-                  copilotMode === 'diagnosis'
-                    ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
-                    : 'bg-surface border-hairline text-secondary hover:text-primary hover:border-rose-500/30'
-                }`}
-              >
-                <Activity className="w-3 h-3 text-rose-500" />
-                Diagnóstico y Casos Similares
-              </button>
+                <button
+                  type="button"
+                  disabled={copilotLoading}
+                  onClick={handleFetchDiagnosis}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-150 border ${
+                    copilotMode === 'diagnosis'
+                      ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
+                      : 'bg-surface border-hairline text-secondary hover:text-primary hover:border-rose-500/30'
+                  }`}
+                >
+                  <Activity className="w-3 h-3 text-rose-500" />
+                  Diagnóstico y Casos Similares
+                </button>
 
-              <button
-                type="button"
-                disabled={copilotLoading}
-                onClick={handleFetchSummary}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-150 border ${
-                  copilotMode === 'summary'
-                    ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
-                    : 'bg-surface border-hairline text-secondary hover:text-primary hover:border-rose-500/30'
-                }`}
-              >
-                <FileText className="w-3 h-3 text-rose-500" />
-                Resumen Ejecutivo
-              </button>
-            </div>
-
-            {/* Copilot Loading */}
-            {copilotLoading && (
-              <div className="p-4 rounded-xl bg-surface border border-hairline text-center text-xs text-secondary flex items-center justify-center gap-2 animate-pulse">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin text-rose-500" />
-                Consultando la memoria del equipo y formulando asistencia técnica...
+                <button
+                  type="button"
+                  disabled={copilotLoading}
+                  onClick={handleFetchSummary}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-150 border ${
+                    copilotMode === 'summary'
+                      ? 'bg-rose-500 text-white border-rose-500 shadow-xs'
+                      : 'bg-surface border-hairline text-secondary hover:text-primary hover:border-rose-500/30'
+                  }`}
+                >
+                  <FileText className="w-3 h-3 text-rose-500" />
+                  Resumen Ejecutivo
+                </button>
               </div>
-            )}
 
-            {/* Copilot Suggestion Card */}
-            {copilotMode === 'suggestion' && suggestion && !copilotLoading && (
-              <div className="p-4 rounded-xl bg-surface border border-rose-500/25 space-y-3 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between text-xs text-secondary border-b border-hairline pb-2">
-                  <span className="font-bold text-rose-500 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Propuesta del Copiloto
-                  </span>
-                  <span className="text-[11px] text-secondary">
-                    {suggestion.source}
-                  </span>
+              {/* Copilot Loading */}
+              {copilotLoading && (
+                <div className="p-4 rounded-xl bg-surface border border-hairline text-center text-xs text-secondary flex items-center justify-center gap-2 animate-pulse">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-rose-500" />
+                  Consultando la memoria del equipo y formulando asistencia técnica...
                 </div>
-                <p className="text-xs text-primary leading-relaxed whitespace-pre-wrap font-sans">
-                  {suggestion.suggested_reply}
-                </p>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-hairline text-xs">
-                  <span className="text-secondary text-[11px] italic">
-                    {suggestion.explanation}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleInsertSuggestion(suggestion.suggested_reply)}
-                    className="craft-btn-primary text-xs py-1 px-3 flex items-center gap-1.5 whitespace-nowrap self-end sm:self-auto"
-                  >
-                    <CornerDownLeft className="w-3.5 h-3.5" />
-                    Insertar en Respuesta
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Copilot Diagnosis Card */}
-            {copilotMode === 'diagnosis' && diagnosis && !copilotLoading && (
-              <div className="p-4 rounded-xl bg-surface border border-rose-500/25 space-y-3 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between text-xs text-secondary border-b border-hairline pb-2">
-                  <span className="font-bold text-rose-500 flex items-center gap-1.5">
-                    <Activity className="w-3.5 h-3.5" />
-                    Diagnóstico Técnico y Acciones Recomendadas
-                  </span>
+              {/* Copilot Suggestion Card */}
+              {copilotMode === 'suggestion' && suggestion && !copilotLoading && (
+                <div className="p-4 rounded-xl bg-surface border border-rose-500/25 space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between text-xs text-secondary border-b border-hairline pb-2">
+                    <span className="font-bold text-rose-500 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Propuesta del Copiloto
+                    </span>
+                    <span className="text-[11px] text-secondary">
+                      {suggestion.source}
+                    </span>
+                  </div>
+                  <p className="text-xs text-primary leading-relaxed whitespace-pre-wrap font-sans">
+                    {suggestion.suggested_reply}
+                  </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-hairline text-xs">
+                    <span className="text-secondary text-[11px] italic">
+                      {suggestion.explanation}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertSuggestion(suggestion.suggested_reply)}
+                      className="craft-btn-primary text-xs py-1 px-3 flex items-center gap-1.5 whitespace-nowrap self-end sm:self-auto"
+                    >
+                      <CornerDownLeft className="w-3.5 h-3.5" />
+                      Insertar en Respuesta
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-primary leading-relaxed">
-                  {diagnosis.diagnosis}
-                </p>
+              )}
 
-                <div className="space-y-1.5 pt-1">
-                  <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
-                    Pasos de Verificación:
-                  </span>
-                  {diagnosis.recommended_steps.map((st, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs text-primary">
-                      <span className="w-4 h-4 rounded-full bg-rose-500/10 text-rose-500 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
-                        {idx + 1}
-                      </span>
-                      <span>{st}</span>
+              {/* Copilot Diagnosis Card */}
+              {copilotMode === 'diagnosis' && diagnosis && !copilotLoading && (
+                <div className="p-4 rounded-xl bg-surface border border-rose-500/25 space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between text-xs text-secondary border-b border-hairline pb-2">
+                    <span className="font-bold text-rose-500 flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5" />
+                      Diagnóstico Técnico y Acciones Recomendadas
+                    </span>
+                  </div>
+                  <p className="text-xs text-primary leading-relaxed">
+                    {diagnosis.diagnosis}
+                  </p>
+
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block">
+                      Pasos Sugeridos:
+                    </span>
+                    {diagnosis.recommended_steps.map((st, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs text-primary">
+                        <span className="w-4 h-4 rounded-full bg-rose-500/10 text-rose-500 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span>{st}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 border-t border-hairline">
+                    <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block mb-1">
+                      Casos Históricos Similares Identificados:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {diagnosis.similar_cases.map((sc, idx) => (
+                        <span key={idx} className="text-xs px-2.5 py-1 rounded-md bg-canvas border border-hairline text-secondary">
+                          {sc}
+                        </span>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
+              )}
 
-                <div className="pt-2 border-t border-hairline">
-                  <span className="text-[11px] font-bold text-secondary uppercase tracking-wider block mb-1">
-                    Casos Históricos Similares Identificados:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {diagnosis.similar_cases.map((sc, idx) => (
-                      <span key={idx} className="text-xs px-2.5 py-1 rounded-md bg-canvas border border-hairline text-secondary">
-                        {sc}
-                      </span>
+              {/* Copilot Summary Card */}
+              {copilotMode === 'summary' && summary && !copilotLoading && (
+                <div className="p-4 rounded-xl bg-surface border border-rose-500/25 space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between text-xs text-secondary border-b border-hairline pb-2">
+                    <span className="font-bold text-rose-500 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5" />
+                      Resumen Ejecutivo del Caso
+                    </span>
+                  </div>
+                  <p className="text-xs text-primary leading-relaxed">
+                    {summary.summary}
+                  </p>
+                  <div className="space-y-1.5 pt-1">
+                    {summary.key_points.map((pt, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs text-primary">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                        <span>{pt}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Copilot Summary Card */}
-            {copilotMode === 'summary' && summary && !copilotLoading && (
-              <div className="p-4 rounded-xl bg-surface border border-rose-500/25 space-y-3 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between text-xs text-secondary border-b border-hairline pb-2">
-                  <span className="font-bold text-rose-500 flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5" />
-                    Resumen Ejecutivo del Caso
-                  </span>
+              {copilotFeedback && (
+                <div className="text-xs text-emerald-500 font-semibold flex items-center gap-1.5 pt-1">
+                  <Check className="w-3.5 h-3.5" />
+                  {copilotFeedback}
                 </div>
-                <p className="text-xs text-primary leading-relaxed">
-                  {summary.summary}
-                </p>
-                <div className="space-y-1.5 pt-1">
-                  {summary.key_points.map((pt, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs text-primary">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
-                      <span>{pt}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {copilotFeedback && (
-              <div className="text-xs text-emerald-500 font-semibold flex items-center gap-1.5 pt-1">
-                <Check className="w-3.5 h-3.5" />
-                {copilotFeedback}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Activity / Comments Timeline */}
           <div className="space-y-3 pt-1">
@@ -510,10 +560,21 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
                 {ticket.comments.map((c) => (
                   <div
                     key={c.id}
-                    className="p-3.5 rounded-xl bg-canvas border border-hairline text-xs space-y-1.5 shadow-xs"
+                    className={`p-3.5 rounded-xl border text-xs space-y-1.5 shadow-xs ${
+                      c.is_internal
+                        ? 'bg-amber-500/5 border-amber-500/30 dark:bg-amber-500/10'
+                        : 'bg-canvas border-hairline'
+                    }`}
                   >
                     <div className="flex items-center justify-between text-secondary">
-                      <span className="font-semibold text-primary">{c.user_name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-primary">{c.user_name}</span>
+                        {c.is_internal && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex items-center gap-1">
+                            <Lock className="w-2.5 h-2.5" /> Nota Interna
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[11px]">{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <p className="text-secondary leading-relaxed whitespace-pre-wrap text-xs">
@@ -527,23 +588,48 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
         </div>
 
         {/* Reply Form Footer */}
-        <form onSubmit={handleAddComment} className="p-4 border-t border-hairline bg-canvas flex gap-2.5">
-          <input
-            type="text"
-            required
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Escribe una respuesta o actualización del caso..."
-            className="craft-input flex-1 text-xs"
-          />
-          <button
-            type="submit"
-            disabled={submittingComment || !commentText.trim()}
-            className="craft-btn-primary text-xs shrink-0"
-          >
-            <Send className="w-3.5 h-3.5" />
-            {submittingComment ? 'Enviando...' : 'Responder'}
-          </button>
+        <form onSubmit={handleAddComment} className="p-4 border-t border-hairline bg-canvas space-y-2">
+          {isStaff && (
+            <div className="flex items-center gap-2 px-1">
+              <label className="flex items-center gap-1.5 text-[11px] text-secondary cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isInternalComment}
+                  onChange={(e) => setIsInternalComment(e.target.checked)}
+                  className="rounded border-hairline text-rose-500 focus:ring-rose-500"
+                />
+                <Lock className="w-3 h-3 text-amber-500" />
+                <span>Nota Interna (visible solo para agentes y administradores)</span>
+              </label>
+            </div>
+          )}
+
+          <div className="flex gap-2.5">
+            <input
+              type="text"
+              required
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder={
+                isInternalComment
+                  ? 'Escribe una nota interna para el equipo técnico...'
+                  : 'Escribe una respuesta o actualización del caso...'
+              }
+              className={`craft-input flex-1 text-xs ${
+                isInternalComment ? 'border-amber-500/40 focus:border-amber-500' : ''
+              }`}
+            />
+            <button
+              type="submit"
+              disabled={submittingComment || !commentText.trim()}
+              className={`craft-btn-primary text-xs shrink-0 ${
+                isInternalComment ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''
+              }`}
+            >
+              <Send className="w-3.5 h-3.5" />
+              {submittingComment ? 'Enviando...' : (isInternalComment ? 'Guardar Nota' : 'Responder')}
+            </button>
+          </div>
         </form>
       </div>
     </div>

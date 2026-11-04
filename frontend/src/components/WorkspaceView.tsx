@@ -141,6 +141,12 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
   }, [slug, statusFilter, catFilter, priorityFilter, slaFilter]);
 
   useEffect(() => {
+    if (desk && desk.user_role !== 'admin' && activeTab !== 'tickets') {
+      setActiveTab('tickets');
+    }
+  }, [desk?.user_role, activeTab]);
+
+  useEffect(() => {
     if (activeTab === 'members') {
       fetchMembersAndInvitations();
     } else if (activeTab === 'ai') {
@@ -386,60 +392,64 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               : 'text-secondary hover:text-primary hover:bg-surface'
           }`}
         >
-          Tickets e Incidencias ({tickets.length})
+          {desk.user_role === 'requester' ? 'Mis Incidencias Radicadas' : 'Tickets e Incidencias'} ({tickets.length})
         </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('members')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'members'
-              ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
-              : 'text-secondary hover:text-primary hover:bg-surface'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          Usuarios e Invitaciones
-        </button>
+        {desk.user_role === 'admin' && (
+          <>
+            <button
+              type="button"
+              onClick={() => setActiveTab('members')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === 'members'
+                  ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
+                  : 'text-secondary hover:text-primary hover:bg-surface'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              Usuarios e Invitaciones
+            </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('ai')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'ai'
-              ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
-              : 'text-secondary hover:text-primary hover:bg-surface'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-rose-300" />
-          Conexión de IA (BYOK)
-        </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('ai')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === 'ai'
+                  ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
+                  : 'text-secondary hover:text-primary hover:bg-surface'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-rose-300" />
+              Conexión de IA (BYOK)
+            </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('context')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'context'
-              ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
-              : 'text-secondary hover:text-primary hover:bg-surface'
-          }`}
-        >
-          <BookOpen className="w-3.5 h-3.5" />
-          Memoria de Soporte
-        </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('context')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === 'context'
+                  ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
+                  : 'text-secondary hover:text-primary hover:bg-surface'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Memoria de Soporte
+            </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('governance')}
-          className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
-            activeTab === 'governance'
-              ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
-              : 'text-secondary hover:text-primary hover:bg-surface'
-          }`}
-        >
-          <Sliders className="w-3.5 h-3.5" />
-          Gobernanza & SLAs
-        </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('governance')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl cursor-pointer transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === 'governance'
+                  ? 'bg-rose-500 text-white shadow-xs scale-[1.02]'
+                  : 'text-secondary hover:text-primary hover:bg-surface'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              Gobernanza & SLAs
+            </button>
+          </>
+        )}
       </div>
 
       {/* Tab 1: Tickets Console */}
@@ -608,7 +618,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
       )}
 
       {/* Tab 2: Members & Custom Invitations (Sprint 4) */}
-      {activeTab === 'members' && (
+      {activeTab === 'members' && desk.user_role === 'admin' && (
         <div className="space-y-8 animate-fade-in">
           {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-hairline">
@@ -869,7 +879,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
       )}
 
       {/* Tab 3: Desk-Specific AI Vault (BYOK) (Sprint 4) */}
-      {activeTab === 'ai' && (
+      {activeTab === 'ai' && desk.user_role === 'admin' && (
         <div className="space-y-6 animate-fade-in">
           {/* Header */}
           <div className="pb-4 border-b border-hairline">
@@ -1023,7 +1033,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
       )}
 
       {/* Tab 4: Organizational Memory & Context */}
-      {activeTab === 'context' && (
+      {activeTab === 'context' && desk.user_role === 'admin' && (
         <div className="space-y-5 animate-fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-hairline">
             <div>
@@ -1069,7 +1079,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
       )}
 
       {/* Tab 5: Governance & AI Feature Toggles */}
-      {activeTab === 'governance' && (
+      {activeTab === 'governance' && desk.user_role === 'admin' && (
         <div className="space-y-6 animate-fade-in">
           <div className="flex items-center justify-between pb-3 border-b border-hairline">
             <div>
@@ -1187,6 +1197,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
           slug={slug}
           ticketCode={selectedTicketCode}
           currentUser={currentUser ? { id: currentUser.id, full_name: currentUser.full_name } : undefined}
+          userRole={desk?.user_role || 'requester'}
           onClose={() => setSelectedTicketCode(null)}
           onTicketUpdated={() => fetchDeskAndTickets()}
         />

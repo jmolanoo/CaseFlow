@@ -126,6 +126,8 @@ def get_desk_context(
     db: Session = Depends(get_db)
 ):
     desk, member = get_membership(slug, current_user.id, db)
+    if member.role != "admin":
+        raise HTTPException(status_code=403, detail="Se requiere rol de Administrador para consultar la memoria de la mesa de ayuda")
     ctx = db.query(HelpDeskContext).filter(HelpDeskContext.help_desk_id == desk.id).first()
     if not ctx:
         ctx = HelpDeskContext(
@@ -312,6 +314,8 @@ def get_desk_ai_toggles(
     db: Session = Depends(get_db)
 ):
     desk, member = get_membership(slug, current_user.id, db)
+    if member.role != "admin":
+        raise HTTPException(status_code=403, detail="Se requiere rol de Administrador para ver la matriz de gobierno de IA")
     toggles = ensure_feature_toggles(desk.id, db)
 
     result = []
@@ -372,6 +376,8 @@ def copilot_suggest_reply(
     db: Session = Depends(get_db)
 ):
     desk, member = get_membership(slug, current_user.id, db)
+    if member.role not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="El copiloto de respuestas está reservado para el personal de soporte y administración")
     check_feature_permission(desk, member, "copiloto_respuestas", db)
 
     ticket = db.query(Ticket).filter(Ticket.help_desk_id == desk.id, Ticket.ticket_code == ticket_code).first()
@@ -438,6 +444,8 @@ def copilot_diagnose(
     db: Session = Depends(get_db)
 ):
     desk, member = get_membership(slug, current_user.id, db)
+    if member.role not in ["admin", "agent"]:
+        raise HTTPException(status_code=403, detail="El diagnóstico de incidencias está reservado para el personal de soporte y administración")
     check_feature_permission(desk, member, "diagnostico_casos", db)
 
     ticket = db.query(Ticket).filter(Ticket.help_desk_id == desk.id, Ticket.ticket_code == ticket_code).first()

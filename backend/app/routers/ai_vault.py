@@ -102,6 +102,8 @@ async def connect_ai_key(
         ).first()
         if not member:
             raise HTTPException(status_code=403, detail="No tienes acceso a esta mesa de ayuda")
+        if member.role != "admin":
+            raise HTTPException(status_code=403, detail="Se requiere rol de Administrador para configurar credenciales de IA en esta mesa de ayuda")
 
     success, latency_ms, msg, models = await test_ai_connection(request.provider, request.api_key, request.model_name)
     if not success:
@@ -172,6 +174,16 @@ def disconnect_ai(
         desk = db.query(HelpDesk).filter(HelpDesk.slug == desk_slug).first()
         if not desk:
             raise HTTPException(status_code=404, detail="Mesa de ayuda no encontrada")
+        member = db.query(HelpDeskMember).filter(
+            HelpDeskMember.help_desk_id == desk.id,
+            HelpDeskMember.user_id == current_user.id,
+            HelpDeskMember.is_active == True
+        ).first()
+        if not member:
+            raise HTTPException(status_code=403, detail="No tienes acceso a esta mesa de ayuda")
+        if member.role != "admin":
+            raise HTTPException(status_code=403, detail="Se requiere rol de Administrador para desvincular credenciales de IA de esta mesa de ayuda")
+
         cred = db.query(UserAICredential).filter(
             UserAICredential.user_id == current_user.id,
             UserAICredential.help_desk_id == desk.id
