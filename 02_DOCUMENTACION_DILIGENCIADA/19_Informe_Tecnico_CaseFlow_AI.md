@@ -6,6 +6,7 @@
 > **Docente Supervisor & Product Owner:** Eduardo Martínez Vidal  
 > **Equipo de Trabajo:** Danna Nerieth Palencia & Jairo Molano Salgado  
 > **Evento:** INNOVASOFT IX Versión (19 de noviembre de 2026)  
+> **Fase:** Fase 1 / Consolidación Integral y Auditoría Rigurosa  
 
 ---
 
@@ -21,38 +22,48 @@
 
 ---
 
-## 2. Aplicación de Metodologías de Desarrollo con IA
+## 2. Decisiones Arquitectónicas y Mejoras Clave de la Fase 1
 
-### 2.1. Spec-Driven Development (SDD)
-Antes de escribir cualquier componente de interfaz o función de backend, se estructuraron los contratos de datos y especificaciones OpenAPI en `schemas.py`. Esto garantiza que los clientes (SPA frontend, servicios de prueba o integraciones externas) se apeguen estrictamente a los contratos semánticos.
+### 2.1. Rediseño Completo de la Landing Page y Eliminación de Pruebas Sintéticas
+- Se removió por completo la tarjeta de prueba interactiva de modelos de IA de la vista pública.
+- Las 4 capacidades principales fueron transformadas de tarjetas compactas a 4 macro-secciones visualmente extensas a lo largo de la página, combinando la tipografía principal *Google Sans* con acentos decorativos en la tipografía cursiva *Alex Brush*, acompañadas de diagramas visuales y mockups en código nativo.
 
-### 2.2. Test-Driven Development (TDD) en IA y Lógica de Negocio
-Se construyó una suite de 20 pruebas automatizadas previas a la certificación del Sprint 2, logrando un **88% de cobertura total verificada** sin pruebas rotas. Se validaron tanto la lógica tradicional (hashing bcrypt, tokens JWT, slugs únicos, creación y ciclo de vida de tickets, SLAs, comentarios) como las pruebas de integración con el Gateway de IA (simulaciones de latencia, sanitización de respuestas JSON, refinamiento heurístico e ingesta retrospectiva).
+### 2.2. Estandarización de Botones Pill (`rounded-full`)
+- Todos los botones interactivos del sistema (primarios, secundarios, filtros, selectores de tema, modales y acciones rápidas) adoptaron geometría de píldora pura (`border-radius: 9999px !important`), garantizando una experiencia táctil y visual uniforme con micro-animaciones `hover:scale-105`.
 
-### 2.3. Criterios de Aceptación Gherkin
-Las Historias de Usuario de los Sprints 1 y 2 se formalizaron bajo la estructura estandarizada:
-```gherkin
-Escenario: Radicación asistida de tickets con refinamiento contextual
-  Dado que el usuario redacta una descripción informal del problema en una mesa con IA
-  Cuando presiona el botón "Refinar con IA"
-  Entonces el sistema analiza el texto contra el Help Desk Context
-  Y sugiere un título profesional, clasifica la categoría óptima y calcula la prioridad con su SLA
-```
+### 2.3. Animaciones Suaves y Desenfoque Completo de Pantalla (Full-Screen Backdrop Blur)
+- Se integró `AnimatePresence` y componentes `motion.div` de Framer Motion en todos los modales para transiciones de entrada y salida pulidas.
+- Se ajustó la jerarquía de capas (`z-[100]`) y se posicionó el desenfoque en coordenadas absolutas `top: 0, left: 0`, garantizando que la Topbar quede 100% desenfocada de manera idéntica al modal de autenticación de la Landing Page.
+- Se eliminó el badge estático "Asistencia IA: Inactiva" de la Topbar global para mayor pulcritud.
+
+### 2.4. Purga Estricta de Tipografías Monospaciadas
+- Se prohíbe cualquier tipografía estilo terminal o monospace (`font-mono`). Se definieron formalmente solo 2 tipografías: *Google Sans* para interfaces, tablas y lectura técnica, y *Alex Brush* para detalles tipográficos de alto impacto.
+
+### 2.5. Consistencia Absoluta en el Estado de Asistencia de IA
+- El backend calcula de manera verídica y centralizada `is_ai_active = desk.enable_ai and has_active_byok_credential`.
+- Se erradicaron incongruencias donde un panel indicaba "Sin configurar" mientras la cabecera marcaba "IA Activa".
+
+### 2.6. Separación de Responsabilidades en Modales de Tickets
+- **Modal de Inspección (`TicketViewModal`):** Permite ver la descripción completa del caso sin truncamiento ni elipses, línea de tiempo de respuestas y notas internas, y triaje de prioridad inmediato para personal técnico.
+- **Modal de Atención Formal (`TicketAttendModal`):** Vista enfocada con editor de texto manual (mensajes al solicitante o notas internas técnicas), selector de transiciones de estado (`in_progress`, `resolved`, `closed`), campo de diagnóstico técnico de resolución obligatorio al resolver, y panel de Copilot con inserción de sugerencias en 1 clic.
+
+### 2.7. Lógica Desacoplada de Prioridades
+- Los solicitantes no seleccionan prioridad al radicar tickets.
+- Si la mesa tiene IA activa: el motor estima y asigna la prioridad analizando el impacto.
+- Si la mesa no tiene IA activa: el ticket se crea como "Sin prioridad asignada" (`priority_id = null`).
+- El personal técnico puede asignar o reclasificar la prioridad directamente vía `PATCH /api/desks/{slug}/tickets/{ticket_code}/priority`.
+
+### 2.8. Depuración de Paleta Cromática y Gráficas Avanzadas
+- Se eliminaron colores ajenos (azules, verdes, morados), consolidando la identidad Duo-Tone: Salmón/Fucsia `#f43f5e`, blanco puro, negro carbón y grises neutros `#18181b` / `#232328`.
+- Se incorporaron métricas ejecutivas con tarjetas Bento renovadas y gráficas interactivas SVG en el Dashboard y en el Workspace.
 
 ---
 
-## 3. Estado de Cumplimiento Consolidado (Sprints 1 y 2)
+## 3. Estado de Pruebas y Cobertura (Fase 1)
 
-| Componente | Sprint | Estado | Verificación |
-| :--- | :---: | :--- | :--- |
-| **Landing Page Trimodal (100% Producción)** | 1 | Terminado | Selector Claro / Oscuro / AMOLED activo y funcional con paleta Duo-Tone |
-| **Módulo de Autenticación (JWT + Bcrypt)** | 1 | Terminado | Registro, login y rutas protegidas con 100% de pruebas pasadas |
-| **Dashboard Central "Mis Help Desks"** | 1 | Terminado | Visualización multi-tenant, tarjetas Bento y métricas de SLAs |
-| **Bóveda BYOK (Gemini, OpenAI, Claude)** | 1 | Terminado | Test de latencia en milisegundos, cifrado AES-256 en base de datos |
-| **Onboarding Wizard Guiado** | 1 | Terminado | Creación atómica de 4 pasos (identidad, categorías, SLAs, confirmación) |
-| **Workspace de Mesa de Ayuda (`/desk/:slug`)** | 2 | Terminado | Vistas modulares por rol: Casos & Tickets, Memoria Contextual y Configuración |
-| **Módulo de Radicación de Tickets (Manual & IA)** | 2 | Terminado | Radicación con cálculo de SLAs dinámicos y asistente de refinamiento IA |
-| **Gestión Integral de Tickets & Ciclo de Vida** | 2 | Terminado | Estados (Open, In Progress, Waiting, Resolved, Closed), historial de respuestas y diagnósticos |
-| **Motor de Ingesta Retrospectiva de Casos** | 2 | Terminado | Ingesta de todos los tickets históricos hacia el `Help Desk Context` con versionamiento |
-| **Suite Automatizada de Pruebas (>80% Cobertura)** | 1 y 2 | Terminado | 20/20 pruebas superadas (100% PASSED), 88% de cobertura verificada |
-| **Pulido Visual Anti-Clichés de IA (Software Craft)** | 1 y 2 | Terminado | Eliminación de sombras difusas, degradados arcoíris e iconografía genérica; bordes milimétricos de 1px |
+| Métrica | Meta Rúbrica | Resultado Obtenido | Estado |
+| :--- | :---: | :---: | :---: |
+| **Pruebas Automatizadas (Pytest)** | > 20 | **27 / 27 Aprobadas** | **100% Exitoso** |
+| **Cobertura de Líneas (`app/`)** | > 80% | **85% (1149 / 1345)** | **Superado** |
+| **Compilación Frontend (`npm run build`)** | 0 Errores | **0 Errores (TypeScript + Vite)** | **100% Exitoso** |
+| **Apego a Paleta y Tipografía** | Estricto | **Google Sans + Alex Brush, Rose-500 Duo-Tone** | **100% Exitoso** |

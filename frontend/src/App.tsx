@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './components/LandingPage';
 import { Dashboard } from './components/Dashboard';
@@ -115,14 +116,16 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Auth Modal */}
-      {authModal.isOpen && (
-        <AuthModal
-          initialTab={authModal.tab}
-          onClose={() => setAuthModal({ ...authModal, isOpen: false })}
-          onSuccess={handleAuthSuccess}
-        />
-      )}
+      {/* Auth Modal with AnimatePresence */}
+      <AnimatePresence>
+        {authModal.isOpen && (
+          <AuthModal
+            initialTab={authModal.tab}
+            onClose={() => setAuthModal({ ...authModal, isOpen: false })}
+            onSuccess={handleAuthSuccess}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

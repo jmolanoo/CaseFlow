@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import (
     User, HelpDesk, HelpDeskMember, Category, Priority,
-    HelpDeskContext, AIFeatureToggle, Ticket, HelpDeskInvitation
+    HelpDeskContext, AIFeatureToggle, Ticket, HelpDeskInvitation,
+    UserAICredential
 )
 from app.schemas import (
     HelpDeskCreateWizard, HelpDeskResponse, HelpDeskListItem,
@@ -22,17 +23,43 @@ router = APIRouter(prefix="/desks", tags=["Help Desks (Mesas de Ayuda)"])
 
 DEFAULT_CATEGORIES = [
     {"name": "Hardware & Equipos", "description": "Fallas físicas en estaciones de trabajo y periféricos", "color": "#f43f5e", "icon": "Cpu"},
-    {"name": "Software & Licencias", "description": "Instalación, fallas y actualización de sistemas", "color": "#3b82f6", "icon": "Layers"},
-    {"name": "Redes & Conectividad", "description": "Acceso a internet, VPN y servicios de red", "color": "#10b981", "icon": "Wifi"},
-    {"name": "Accesos & Seguridad", "description": "Cuentas corporativas, permisos y contraseñas", "color": "#8b5cf6", "icon": "Shield"},
+    {"name": "Software & Licencias", "description": "Instalación, fallas y actualización de sistemas", "color": "#f43f5e", "icon": "Layers"},
+    {"name": "Redes & Conectividad", "description": "Acceso a internet, VPN y servicios de red", "color": "#f43f5e", "icon": "Wifi"},
+    {"name": "Accesos & Seguridad", "description": "Cuentas corporativas, permisos y contraseñas", "color": "#f43f5e", "icon": "Shield"},
 ]
 
 DEFAULT_PRIORITIES = [
-    {"name": "Baja", "level": 1, "color": "#10b981", "sla_response_hours": 24, "sla_resolution_hours": 72},
-    {"name": "Media", "level": 2, "color": "#3b82f6", "sla_response_hours": 8, "sla_resolution_hours": 24},
-    {"name": "Alta", "level": 3, "color": "#f59e0b", "sla_response_hours": 4, "sla_resolution_hours": 12},
+    {"name": "Baja", "level": 1, "color": "#f43f5e", "sla_response_hours": 24, "sla_resolution_hours": 72},
+    {"name": "Media", "level": 2, "color": "#f43f5e", "sla_response_hours": 8, "sla_resolution_hours": 24},
+    {"name": "Alta", "level": 3, "color": "#f43f5e", "sla_response_hours": 4, "sla_resolution_hours": 12},
     {"name": "Crítica", "level": 4, "color": "#f43f5e", "sla_response_hours": 1, "sla_resolution_hours": 4},
 ]
+
+def check_desk_ai_active(desk_id: int, desk_is_ai_enabled: bool, db: Session) -> bool:
+    if not desk_is_ai_enabled:
+        return False
+    cred = db.query(UserAICredential).filter(
+        UserAICredential.help_desk_id == desk_id,
+        UserAICredential.is_active == True
+    ).first()
+    return cred is not None
+
+def build_help_desk_response(desk: HelpDesk, member_role: str, db: Session) -> HelpDeskResponse:
+    cats = db.query(Category).filter(Category.help_desk_id == desk.id).all()
+    priors = db.query(Priority).filter(Priority.help_desk_id == desk.id).all()
+    is_active_ai = check_desk_ai_active(desk.id, desk.is_ai_enabled, db)
+    return HelpDeskResponse(
+        id=desk.id,
+        name=desk.name,
+        slug=desk.slug,
+        description=desk.description,
+        is_ai_enabled=desk.is_ai_enabled,
+        is_ai_active=is_active_ai,
+        created_at=desk.created_at,
+        categories=[CategoryResponse.model_validate(c) for c in cats],
+        priorities=[PriorityResponse.model_validate(p) for p in priors],
+        user_role=member_role
+    )
 
 def extract_code_from_input(raw: str) -> str:
     raw = raw.strip()
@@ -61,12 +88,14 @@ def list_my_help_desks(current_user: User = Depends(get_current_user), db: Sessi
         tickets_count = db.query(Ticket).filter(Ticket.help_desk_id == desk.id).count()
         sla_rate = 98.5
 
+        is_active_ai = check_desk_ai_active(desk.id, desk.is_ai_enabled, db)
         results.append(HelpDeskListItem(
             id=desk.id,
             name=desk.name,
             slug=desk.slug,
             description=desk.description,
             is_ai_enabled=desk.is_ai_enabled,
+            is_ai_active=is_active_ai,
             role=m.role,
             members_count=members_count,
             tickets_count=tickets_count,
@@ -178,20 +207,7 @@ def create_help_desk_wizard(
     db.commit()
     db.refresh(desk)
 
-    cats = db.query(Category).filter(Category.help_desk_id == desk.id).all()
-    priors = db.query(Priority).filter(Priority.help_desk_id == desk.id).all()
-
-    return HelpDeskResponse(
-        id=desk.id,
-        name=desk.name,
-        slug=desk.slug,
-        description=desk.description,
-        is_ai_enabled=desk.is_ai_enabled,
-        created_at=desk.created_at,
-        categories=[CategoryResponse.model_validate(c) for c in cats],
-        priorities=[PriorityResponse.model_validate(p) for p in priors],
-        user_role="admin"
-    )
+    return build_help_desk_response(desk, "admin", db)
 
 @router.get("/{slug}", response_model=HelpDeskResponse)
 def get_help_desk(slug: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -219,20 +235,7 @@ def get_help_desk(slug: str, current_user: User = Depends(get_current_user), db:
             detail="Tu cuenta en esta mesa de ayuda ha sido desactivada por el administrador."
         )
 
-    cats = db.query(Category).filter(Category.help_desk_id == desk.id).all()
-    priors = db.query(Priority).filter(Priority.help_desk_id == desk.id).all()
-
-    return HelpDeskResponse(
-        id=desk.id,
-        name=desk.name,
-        slug=desk.slug,
-        description=desk.description,
-        is_ai_enabled=desk.is_ai_enabled,
-        created_at=desk.created_at,
-        categories=[CategoryResponse.model_validate(c) for c in cats],
-        priorities=[PriorityResponse.model_validate(p) for p in priors],
-        user_role=member.role
-    )
+    return build_help_desk_response(desk, member.role, db)
 
 @router.patch("/{slug}/ai-toggle", response_model=HelpDeskResponse)
 def toggle_ai(slug: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -253,20 +256,7 @@ def toggle_ai(slug: str, current_user: User = Depends(get_current_user), db: Ses
     db.commit()
     db.refresh(desk)
 
-    cats = db.query(Category).filter(Category.help_desk_id == desk.id).all()
-    priors = db.query(Priority).filter(Priority.help_desk_id == desk.id).all()
-
-    return HelpDeskResponse(
-        id=desk.id,
-        name=desk.name,
-        slug=desk.slug,
-        description=desk.description,
-        is_ai_enabled=desk.is_ai_enabled,
-        created_at=desk.created_at,
-        categories=[CategoryResponse.model_validate(c) for c in cats],
-        priorities=[PriorityResponse.model_validate(p) for p in priors],
-        user_role=member.role
-    )
+    return build_help_desk_response(desk, member.role, db)
 
 # --- Sprint 4: Member Management Endpoints ---
 
@@ -684,17 +674,7 @@ def join_help_desk(
             msg = f"Tu cuenta en '{desk.name}' ha sido reactivada con rol de {inv.role.capitalize()}."
         else:
             msg = f"Ya eres miembro activo de '{desk.name}' con rol de {member.role.capitalize()}."
-        desk_resp = HelpDeskResponse(
-            id=desk.id,
-            name=desk.name,
-            slug=desk.slug,
-            description=desk.description,
-            is_ai_enabled=desk.is_ai_enabled,
-            created_at=desk.created_at,
-            categories=[CategoryResponse.model_validate(c) for c in cats],
-            priorities=[PriorityResponse.model_validate(p) for p in priors],
-            user_role=member.role
-        )
+        desk_resp = build_help_desk_response(desk, member.role, db)
         return JoinDeskResponse(message=msg, role=member.role, desk=desk_resp)
 
     # Add new member
@@ -708,17 +688,7 @@ def join_help_desk(
     inv.uses_count += 1
     db.commit()
 
-    desk_resp = HelpDeskResponse(
-        id=desk.id,
-        name=desk.name,
-        slug=desk.slug,
-        description=desk.description,
-        is_ai_enabled=desk.is_ai_enabled,
-        created_at=desk.created_at,
-        categories=[CategoryResponse.model_validate(c) for c in cats],
-        priorities=[PriorityResponse.model_validate(p) for p in priors],
-        user_role=inv.role
-    )
+    desk_resp = build_help_desk_response(desk, inv.role, db)
 
     role_label = "Soporte (Agente)" if inv.role == "agent" else ("Administrador" if inv.role == "admin" else "Usuario / Empleado")
     return JoinDeskResponse(

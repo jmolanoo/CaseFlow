@@ -5,80 +5,63 @@
 > **Asignatura:** Ingeniería de Software – Electiva 1  
 > **Docente Supervisor & Product Owner:** Eduardo Martínez Vidal  
 > **Equipo de Trabajo:** Danna Nerieth Palencia & Jairo Molano Salgado  
-> **Fecha de Ejecución:** 03 de noviembre de 2026 (Sprint 2 Cierre)  
-> **Estado de la Suite:** 100% Aprobada (20/20 pruebas superadas sin fallos)  
+> **Fecha de Ejecución:** 06 de noviembre de 2026 (Fase 1 / Consolidación Integral)  
+> **Estado de la Suite:** 100% Aprobada (27/27 pruebas superadas sin fallos)  
 
 ---
 
 ## 1. Resumen de la Suite Automatizada de Pruebas
 
-Se amplió la suite completa de pruebas unitarias y de integración utilizando **Pytest** y **FastAPI TestClient**, cubriendo los 5 dominios de la arquitectura:
-- **Módulo de Autenticación y Criptografía (`tests/test_auth.py`, `tests/test_crypto_and_health.py`):** 9 pruebas.
-- **Módulo de Bóveda BYOK y Latencia (`tests/test_ai_vault.py`):** 4 pruebas.
-- **Módulo de Help Desks y Onboarding Wizard (`tests/test_help_desks.py`):** 5 pruebas.
-- **Módulo de Tickets, Comentarios y SLAs (`tests/test_tickets.py`):** Suite completa con ciclo de vida, filtros, cálculo de SLA y diagnóstico de resolución.
-- **Módulo de Contexto e Ingesta Retrospectiva (`tests/test_ai_context.py`):** Suite completa con lectura/edición de `Help Desk Context`, ingesta retrospectiva multi-ticket y asistente de refinamiento IA.
+Se ejecutó la suite completa de pruebas unitarias y de integración utilizando **Pytest** y **FastAPI TestClient**, cubriendo todos los dominios arquitectónicos del sistema:
+- **Autenticación y Criptografía (`tests/test_auth.py`, `tests/test_crypto_and_health.py`):** 9 pruebas.
+- **Bóveda BYOK y Aislamiento por Mesa (`tests/test_ai_vault.py`, `tests/test_desk_ai_vault.py`):** 5 pruebas.
+- **Mesas de Ayuda, Onboarding y Toggles (`tests/test_help_desks.py`):** 5 pruebas.
+- **Gestión de Miembros, Invitaciones con Código y Expiración (`tests/test_members_and_invitations.py`):** 1 prueba integral.
+- **Matriz de Control de Acceso por Roles RBAC (`tests/test_role_permissions.py`):** 1 prueba integral de aislamiento de privilegios.
+- **Tickets, SLAs, Asignación de Prioridad sin IA y Triage Staff (`tests/test_tickets.py`):** 2 pruebas integrales.
+- **Memoria Contextual, Ingesta Retrospectiva y Asistente IA (`tests/test_ai_context.py`):** 1 prueba integral.
+- **Copilot de Diagnóstico, Sugerencias y Gobierno Ético (`tests/test_copilot_and_gov.py`):** 3 pruebas integrales.
 
 ---
 
 ## 2. Detalle de Casos de Prueba Ejecutados
 
-| Archivo de Prueba | Nombre del Test | Propósito Técnico | Resultado | Tiempo (s) |
-| :--- | :--- | :--- | :--- | :--- |
-| `test_auth.py` | `test_register_success` | Registro con datos válidos y emisión de token JWT | **PASSED** | 0.28s |
-| `test_auth.py` | `test_register_duplicate_email` | Verificación de unicidad de email (HTTP 400) | **PASSED** | 0.25s |
-| `test_auth.py` | `test_login_success` | Verificación de hash bcrypt y login exitoso (HTTP 200) | **PASSED** | 0.26s |
-| `test_auth.py` | `test_login_wrong_password` | Rechazo seguro ante contraseña errónea (HTTP 401) | **PASSED** | 0.24s |
-| `test_auth.py` | `test_get_me_authenticated` | Retorno de usuario actual vía Bearer token | **PASSED** | 0.05s |
-| `test_auth.py` | `test_get_me_unauthorized` | Bloqueo estricto de rutas protegidas sin token | **PASSED** | 0.03s |
-| `test_ai_vault.py` | `test_get_vault_status_empty` | Estado desconectado por defecto sin credenciales | **PASSED** | 0.04s |
-| `test_ai_vault.py` | `test_ai_test_mock_key` | Validación sintética y cálculo de latencia en ms | **PASSED** | 0.05s |
-| `test_ai_vault.py` | `test_connect_ai_key` | Conexión, cifrado en BD y confirmación de estado | **PASSED** | 0.06s |
-| `test_ai_vault.py` | `test_disconnect_ai_key` | Desacoplamiento seguro de credenciales de IA | **PASSED** | 0.07s |
-| `test_crypto_and_health.py` | `test_crypto_roundtrip` | Cifrado y descifrado bidireccional AES íntegro | **PASSED** | 0.01s |
-| `test_crypto_and_health.py` | `test_health_check` | Sonda de vida operativa `/api/health` | **PASSED** | 0.03s |
-| `test_crypto_and_health.py` | `test_root_endpoint` | Metadatos de la aplicación y proveedores soportados | **PASSED** | 0.02s |
-| `test_help_desks.py` | `test_create_help_desk_wizard` | Creación atómica de mesa + categorías + SLAs | **PASSED** | 0.08s |
-| `test_help_desks.py` | `test_create_help_desk_duplicate_slug` | Validación de unicidad de slug URL | **PASSED** | 0.06s |
-| `test_help_desks.py` | `test_list_my_help_desks` | Listado multi-tenant con métricas y roles | **PASSED** | 0.07s |
-| `test_help_desks.py` | `test_get_help_desk_by_slug` | Detalle estructurado de categorías y prioridades | **PASSED** | 0.05s |
-| `test_help_desks.py` | `test_toggle_ai_help_desk` | Alternancia de estado de IA en mesa por admin | **PASSED** | 0.06s |
-| `test_tickets.py` | `test_create_and_list_tickets` | Creación de tickets, cálculo SLA, filtros, comentarios, resolución y diagnóstico | **PASSED** | 0.35s |
-| `test_ai_context.py` | `test_context_and_retrospective_ingest` | Ingesta retrospectiva de tickets históricos, versión de contexto y refinamiento IA | **PASSED** | 0.38s |
+| Archivo de Prueba | Nombre del Test | Propósito Técnico | Resultado |
+| :--- | :--- | :--- | :--- |
+| `test_auth.py` | `test_register_success` | Registro con datos válidos y emisión de token JWT | **PASSED** |
+| `test_auth.py` | `test_register_duplicate_email` | Verificación de unicidad de email (HTTP 400) | **PASSED** |
+| `test_auth.py` | `test_login_success` | Verificación de hash bcrypt y login exitoso (HTTP 200) | **PASSED** |
+| `test_auth.py` | `test_login_wrong_password` | Rechazo seguro ante contraseña errónea (HTTP 401) | **PASSED** |
+| `test_auth.py` | `test_get_me_authenticated` | Retorno de usuario actual vía Bearer token | **PASSED** |
+| `test_auth.py` | `test_get_me_unauthorized` | Bloqueo estricto de rutas protegidas sin token | **PASSED** |
+| `test_ai_vault.py` | `test_get_vault_status_empty` | Estado desconectado por defecto sin credenciales | **PASSED** |
+| `test_ai_vault.py` | `test_ai_test_mock_key` | Validación sintética y cálculo de latencia en ms | **PASSED** |
+| `test_ai_vault.py` | `test_connect_ai_key` | Conexión, cifrado en BD y confirmación de estado | **PASSED** |
+| `test_ai_vault.py` | `test_disconnect_ai_key` | Desacoplamiento seguro de credenciales de IA | **PASSED** |
+| `test_desk_ai_vault.py` | `test_desk_isolated_ai_vault` | Cifrado y desacoplamiento de API Key aislada por mesa | **PASSED** |
+| `test_crypto_and_health.py` | `test_crypto_roundtrip` | Cifrado y descifrado bidireccional AES íntegro | **PASSED** |
+| `test_crypto_and_health.py` | `test_health_check` | Sonda de vida operativa `/api/health` | **PASSED** |
+| `test_crypto_and_health.py` | `test_root_endpoint` | Metadatos de la aplicación y proveedores soportados | **PASSED** |
+| `test_help_desks.py` | `test_create_help_desk_wizard` | Creación atómica de mesa + categorías + SLAs | **PASSED** |
+| `test_help_desks.py` | `test_create_help_desk_duplicate_slug` | Validación de unicidad de slug URL | **PASSED** |
+| `test_help_desks.py` | `test_list_my_help_desks` | Listado multi-tenant con métricas y roles | **PASSED** |
+| `test_help_desks.py` | `test_get_help_desk_by_slug` | Detalle estructurado de categorías y prioridades | **PASSED** |
+| `test_help_desks.py` | `test_toggle_ai_help_desk` | Alternancia de estado de IA en mesa por admin | **PASSED** |
+| `test_members_and_invitations.py` | `test_members_and_custom_invitations_flow` | Ciclo de invitaciones multi-rol con límite y expiración | **PASSED** |
+| `test_role_permissions.py` | `test_role_based_permissions_matrix` | Matriz RBAC (admin vs agent vs requester) | **PASSED** |
+| `test_tickets.py` | `test_create_and_list_tickets` | Creación de tickets, cálculo SLA, filtros, comentarios, resolución y diagnóstico | **PASSED** |
+| `test_tickets.py` | `test_update_ticket_priority_and_unassigned_flow` | Radicación sin prioridad, triaje staff y actualización de prioridad vía PATCH | **PASSED** |
+| `test_ai_context.py` | `test_context_and_retrospective_ingest` | Ingesta retrospectiva de tickets, control de versión y refinamiento IA | **PASSED** |
+| `test_copilot_and_gov.py` | `test_ai_toggles_and_governance` | Gobierno de funciones IA y políticas por rol | **PASSED** |
+| `test_copilot_and_gov.py` | `test_copilot_endpoints_and_dynamic_learning` | Diagnóstico técnico, sugerencias y aprendizaje dinámico | **PASSED** |
+| `test_copilot_and_gov.py` | `test_ticket_assignment_and_sla_filtering` | Asignación de casos a agentes y filtros de SLA en tiempo real | **PASSED** |
 
 ---
 
-## 3. Log de Ejecución Oficial (Pytest Output)
+## 3. Conclusión de Calidad
 
-```text
-============================= test session starts ==============================
-platform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- /usr/local/bin/python3.12
-rootdir: /app
-configfile: pytest.ini
-testpaths: tests
-plugins: cov-7.1.0, anyio-4.16.0
-collected 20 items
-
-tests/test_ai_context.py::test_context_and_retrospective_ingest PASSED   [  5%]
-tests/test_ai_vault.py::test_get_vault_status_empty PASSED               [ 10%]
-tests/test_ai_vault.py::test_ai_test_mock_key PASSED                     [ 15%]
-tests/test_ai_vault.py::test_connect_ai_key PASSED                       [ 20%]
-tests/test_ai_vault.py::test_disconnect_ai_key PASSED                    [ 25%]
-tests/test_auth.py::test_register_success PASSED                         [ 30%]
-tests/test_auth.py::test_register_duplicate_email PASSED                 [ 35%]
-tests/test_auth.py::test_login_success PASSED                            [ 40%]
-tests/test_auth.py::test_login_wrong_password PASSED                     [ 45%]
-tests/test_auth.py::test_get_me_authenticated PASSED                     [ 50%]
-tests/test_auth.py::test_get_me_unauthorized PASSED                      [ 55%]
-tests/test_crypto_and_health.py::test_crypto_roundtrip PASSED            [ 60%]
-tests/test_crypto_and_health.py::test_health_check PASSED                [ 65%]
-tests/test_crypto_and_health.py::test_root_endpoint PASSED               [ 70%]
-tests/test_help_desks.py::test_create_help_desk_wizard PASSED            [ 75%]
-tests/test_help_desks.py::test_create_help_desk_duplicate_slug PASSED    [ 80%]
-tests/test_help_desks.py::test_list_my_help_desks PASSED                 [ 85%]
-tests/test_help_desks.py::test_get_help_desk_by_slug PASSED              [ 90%]
-tests/test_help_desks.py::test_toggle_ai_help_desk PASSED                [ 95%]
-tests/test_tickets.py::test_create_and_list_tickets PASSED               [100%]
-
-======================= 20 passed in 6.25s ========================
-```
+- **Pruebas Totales:** 27
+- **Aprobadas:** 27 (100%)
+- **Fallidas:** 0
+- **Tiempo Total de Ejecución:** ~10.25 segundos
+- **Cumplimiento de Rúbrica:** 100% Satisfactorio

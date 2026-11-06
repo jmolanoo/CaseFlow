@@ -110,6 +110,7 @@ class HelpDeskResponse(BaseModel):
     slug: str
     description: Optional[str]
     is_ai_enabled: bool
+    is_ai_active: bool = False
     created_at: datetime.datetime
     categories: List[CategoryResponse] = []
     priorities: List[PriorityResponse] = []
@@ -124,6 +125,7 @@ class HelpDeskListItem(BaseModel):
     slug: str
     description: Optional[str]
     is_ai_enabled: bool
+    is_ai_active: bool = False
     role: str
     members_count: int
     tickets_count: int
@@ -136,6 +138,9 @@ class TicketCreate(BaseModel):
     description: str = Field(..., min_length=5)
     category_id: Optional[int] = None
     priority_id: Optional[int] = None
+
+class TicketPriorityUpdate(BaseModel):
+    priority_id: int
 
 class TicketStatusUpdate(BaseModel):
     status: str = Field(..., pattern="^(open|in_progress|waiting|resolved|closed)$")

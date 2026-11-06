@@ -4,12 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import (
-    User, HelpDesk, HelpDeskMember, Category, Priority, Ticket, TicketComment, HelpDeskContext
+    User, HelpDesk, HelpDeskMember, Category, Priority, Ticket, TicketComment, HelpDeskContext,
+    UserAICredential
 )
 from app.schemas import (
     TicketCreate, TicketResponse, TicketDetailResponse,
     TicketStatusUpdate, TicketCommentCreate, TicketCommentResponse,
-    TicketAssignRequest
+    TicketAssignRequest, TicketPriorityUpdate
 )
 from app.auth import get_current_user
 
@@ -46,7 +47,7 @@ def map_ticket_response(ticket: Ticket, db: Session) -> TicketResponse:
     comments_count = db.query(TicketComment).filter(TicketComment.ticket_id == ticket.id).count()
 
     sla_hours = priority.sla_resolution_hours if priority else 24
-    sla_due = ticket.created_at + datetime.timedelta(hours=sla_hours)
+    sla_due = (ticket.created_at + datetime.timedelta(hours=sla_hours)) if priority else None
 
     return TicketResponse(
         id=ticket.id,
@@ -58,8 +59,8 @@ def map_ticket_response(ticket: Ticket, db: Session) -> TicketResponse:
         category_id=category.id if category else None,
         category_name=category.name if category else "General",
         priority_id=priority.id if priority else None,
-        priority_name=priority.name if priority else "Media",
-        priority_level=priority.level if priority else 2,
+        priority_name=priority.name if priority else "Sin prioridad asignada",
+        priority_level=priority.level if priority else None,
         requester_id=ticket.requester_id,
         requester_name=requester.full_name if requester else "Usuario",
         assignee_id=assignee.id if assignee else None,
@@ -90,15 +91,39 @@ def create_ticket(
         default_cat = db.query(Category).filter(Category.help_desk_id == desk.id).first()
         cat_id = default_cat.id if default_cat else None
 
-    # Validate priority if passed
-    prio_id = payload.priority_id
-    if prio_id:
-        prio = db.query(Priority).filter(Priority.id == prio_id, Priority.help_desk_id == desk.id).first()
-        if not prio:
+    # Priority logic:
+    prio_id = None
+    if payload.priority_id:
+        prio = db.query(Priority).filter(Priority.id == payload.priority_id, Priority.help_desk_id == desk.id).first()
+        if prio:
+            prio_id = prio.id
+    else:
+        # Check if desk has active AI assistance
+        cred = db.query(UserAICredential).filter(
+            UserAICredential.help_desk_id == desk.id,
+            UserAICredential.is_active == True
+        ).first()
+
+        if desk.is_ai_enabled and cred:
+            # AI estimates priority from title and description
+            priors = db.query(Priority).filter(Priority.help_desk_id == desk.id).order_by(Priority.level.desc()).all()
+            text_combined = f"{payload.title} {payload.description}".lower()
+            crit_keywords = ["crítico", "critico", "urgente", "bloqueo", "caído", "caido", "emergencia", "producción", "produccion", "grave", "severo", "parada", "fatal"]
+            high_keywords = ["error", "falla", "imposible", "inconveniente", "rápido", "rapido", "problema", "afectado", "pago", "transacción"]
+
+            if any(k in text_combined for k in crit_keywords) and priors:
+                chosen = priors[0]
+            elif any(k in text_combined for k in high_keywords) and len(priors) > 1:
+                chosen = priors[1]
+            elif priors:
+                chosen = priors[len(priors) // 2]
+            else:
+                chosen = None
+
+            prio_id = chosen.id if chosen else None
+        else:
+            # Desk operates manually without active AI: no priority assigned at creation
             prio_id = None
-    if not prio_id:
-        default_prio = db.query(Priority).filter(Priority.help_desk_id == desk.id).order_by(Priority.level.asc()).first()
-        prio_id = default_prio.id if default_prio else None
 
     # Generate sequential unique ticket code
     count = db.query(Ticket).filter(Ticket.help_desk_id == desk.id).count() + 1
@@ -119,6 +144,47 @@ def create_ticket(
     db.commit()
     db.refresh(ticket)
 
+    return map_ticket_response(ticket, db)
+
+@router.patch("/{ticket_code}/priority", response_model=TicketResponse)
+def update_ticket_priority(
+    slug: str,
+    ticket_code: str,
+    payload: TicketPriorityUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    desk, member = get_membership(slug, current_user.id, db)
+    if member.role not in ["admin", "agent"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo el personal de soporte o administradores pueden asignar o modificar la prioridad"
+        )
+    ticket = db.query(Ticket).filter(
+        Ticket.help_desk_id == desk.id,
+        Ticket.ticket_code == ticket_code
+    ).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    prio = db.query(Priority).filter(
+        Priority.id == payload.priority_id,
+        Priority.help_desk_id == desk.id
+    ).first()
+    if not prio:
+        raise HTTPException(status_code=404, detail="Nivel de prioridad no válido para esta mesa de ayuda")
+
+    ticket.priority_id = prio.id
+    comment = TicketComment(
+        ticket_id=ticket.id,
+        user_id=current_user.id,
+        message=f"**Triaje de Caso:** Prioridad asignada a '{prio.name}' (Nivel {prio.level}, SLA {prio.sla_resolution_hours}h).",
+        is_internal=True,
+        created_at=datetime.datetime.utcnow()
+    )
+    db.add(comment)
+    db.commit()
+    db.refresh(ticket)
     return map_ticket_response(ticket, db)
 
 @router.get("", response_model=List[TicketResponse])

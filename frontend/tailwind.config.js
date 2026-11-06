@@ -39,6 +39,7 @@ export default {
       fontFamily: {
         sans: ["'Google Sans'", "'Product Sans'", "'Plus Jakarta Sans'", "system-ui", "-apple-system", "sans-serif"],
         cursive: ["'Alex Brush'", "'Playfair Display'", "cursive", "serif"],
+        mono: ["'Google Sans'", "'Product Sans'", "sans-serif"],
       },
     },
   },

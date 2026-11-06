@@ -11,15 +11,15 @@
     --border-strong: #cbd5e1;
     --text-primary: #0f172a;
     --text-secondary: #64748b;
-    --accent: #e11d48;
-    --accent-hover: #be123c;
-    --accent-subtle: rgba(225, 29, 72, 0.08);
-    --accent-border: rgba(225, 29, 72, 0.25);
+    --accent: #f43f5e;
+    --accent-hover: #e11d48;
+    --accent-subtle: rgba(244, 63, 94, 0.08);
+    --accent-border: rgba(244, 63, 94, 0.25);
 
     /* Secondary Duo-Tone: Negro en modo claro */
     --secondary-bg: #09090b;
     --secondary-text: #ffffff;
-    --secondary-hover: #27272a;
+    --secondary-hover: #18181b;
     --secondary-border: #09090b;
   }
 
@@ -33,7 +33,7 @@
     --text-primary: #f4f4f5;
     --text-secondary: #a1a1aa;
     --accent: #f43f5e;
-    --accent-hover: #f43f5e;
+    --accent-hover: #fb7185;
     --accent-subtle: rgba(244, 63, 94, 0.12);
     --accent-border: rgba(244, 63, 94, 0.28);
 
@@ -112,16 +112,16 @@
   .craft-card {
     background-color: var(--bg-surface);
     border: 1px solid var(--border-subtle);
-    border-radius: 1rem;
+    border-radius: 1.25rem;
     padding: 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 6px 16px -4px rgba(0, 0, 0, 0.03);
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .craft-card:hover {
     border-color: var(--border-strong);
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
+    box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px) scale(1.02);
   }
 
   /* Form Inputs - No collision with icons */
@@ -129,11 +129,11 @@
     background-color: var(--bg-canvas);
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
-    border-radius: 0.625rem;
+    border-radius: 0.75rem;
     padding: 0.625rem 0.875rem;
     font-size: 0.8125rem;
     line-height: 1.25rem;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
   .craft-input:focus {
@@ -146,13 +146,13 @@
     padding-left: 2.75rem !important;
   }
 
-  /* Buttons: Primary (Salmon/Rose) */
+  /* Buttons: Primary (Salmon/Rose) - Strict Pill Shape with Prominent Hover Animation */
   .craft-btn-primary {
     background-color: var(--accent);
     color: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 0.625rem;
-    padding: 0.5rem 1.125rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 9999px !important;
+    padding: 0.55rem 1.35rem;
     font-size: 0.8125rem;
     font-weight: 600;
     display: inline-flex;
@@ -160,27 +160,27 @@
     justify-content: center;
     gap: 0.5rem;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(225, 29, 72, 0.2);
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 8px rgba(244, 63, 94, 0.25);
+    transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .craft-btn-primary:hover {
     background-color: var(--accent-hover);
-    transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(244, 63, 94, 0.4);
   }
 
   .craft-btn-primary:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
 
-  /* Buttons: Secondary (Black in Light, White in Dark/AMOLED) */
+  /* Buttons: Secondary (Black in Light, White in Dark/AMOLED) - Strict Pill Shape */
   .craft-btn-secondary {
     background-color: var(--secondary-bg);
     color: var(--secondary-text);
     border: 1px solid var(--secondary-border);
-    border-radius: 0.625rem;
-    padding: 0.5rem 1.125rem;
+    border-radius: 9999px !important;
+    padding: 0.55rem 1.35rem;
     font-size: 0.8125rem;
     font-weight: 600;
     display: inline-flex;
@@ -188,18 +188,18 @@
     justify-content: center;
     gap: 0.5rem;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .craft-btn-secondary:hover {
     background-color: var(--secondary-hover);
-    transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
   }
 
   .craft-btn-secondary:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
 }
 

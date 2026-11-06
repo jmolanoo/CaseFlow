@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { X, Lock, Mail, User, AlertCircle, ArrowRight } from 'lucide-react';
 import { api, User as UserType } from '../api';
 
@@ -39,26 +40,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialTab, onClose, onSuc
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-sm rounded-2xl border border-hairline bg-surface p-7 shadow-2xl transition-all">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+    >
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ type: "spring", duration: 0.3, bounce: 0.15 }}
+        className="relative w-full max-w-sm rounded-3xl border border-hairline bg-surface p-7 shadow-2xl transition-all"
+      >
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-canvas cursor-pointer transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-full text-secondary hover:text-primary hover:bg-canvas cursor-pointer transition-all hover:scale-110 active:scale-95"
         >
           <X className="w-4 h-4" />
         </button>
 
-        {/* Tab switch */}
-        <div className="flex border-b border-hairline pb-3 mb-6">
+        {/* Tab switch pills */}
+        <div className="flex p-1 bg-canvas rounded-full border border-hairline mb-6">
           <button
             type="button"
             onClick={() => { setTab('login'); setError(null); }}
-            className={`pb-2 text-xs font-semibold tracking-tight transition-all border-b-2 mr-6 cursor-pointer ${
+            className={`flex-1 py-1.5 rounded-full text-xs font-semibold tracking-tight transition-all duration-200 cursor-pointer ${
               tab === 'login'
-                ? 'border-rose-500 text-rose-500 font-bold'
-                : 'border-transparent text-secondary hover:text-primary'
+                ? 'bg-rose-500 text-white shadow-sm'
+                : 'text-secondary hover:text-primary'
             }`}
           >
             Iniciar Sesión
@@ -66,10 +79,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialTab, onClose, onSuc
           <button
             type="button"
             onClick={() => { setTab('register'); setError(null); }}
-            className={`pb-2 text-xs font-semibold tracking-tight transition-all border-b-2 cursor-pointer ${
+            className={`flex-1 py-1.5 rounded-full text-xs font-semibold tracking-tight transition-all duration-200 cursor-pointer ${
               tab === 'register'
-                ? 'border-rose-500 text-rose-500 font-bold'
-                : 'border-transparent text-secondary hover:text-primary'
+                ? 'bg-rose-500 text-white shadow-sm'
+                : 'text-secondary hover:text-primary'
             }`}
           >
             Crear Cuenta
@@ -77,7 +90,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialTab, onClose, onSuc
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs flex items-center gap-2.5">
+          <div className="mb-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs flex items-center gap-2.5">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="leading-snug">{error}</span>
           </div>
@@ -135,13 +148,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialTab, onClose, onSuc
           <button
             type="submit"
             disabled={loading}
-            className="craft-btn-primary w-full mt-3 py-2.5 shadow-md"
+            className="craft-btn-primary w-full mt-3 py-3 shadow-md rounded-full"
           >
             {loading ? 'Procesando...' : tab === 'login' ? 'Acceder al Sistema' : 'Completar Registro'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

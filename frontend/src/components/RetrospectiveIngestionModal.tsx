@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { X, Sparkles, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react';
 import { api, RetrospectiveIngestResult } from '../api';
 
@@ -47,12 +48,24 @@ export const RetrospectiveIngestionModal: React.FC<RetrospectiveIngestionModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl border border-hairline bg-surface p-7 shadow-2xl transition-all">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+    >
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ type: "spring", duration: 0.3, bounce: 0.15 }}
+        className="relative w-full max-w-lg rounded-3xl border border-hairline bg-surface p-7 shadow-2xl transition-all"
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-hairline">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-canvas border border-hairline flex items-center justify-center text-rose-500 shadow-xs">
+            <div className="w-9 h-9 rounded-full bg-canvas border border-hairline flex items-center justify-center text-rose-500 shadow-xs">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
@@ -67,14 +80,14 @@ export const RetrospectiveIngestionModal: React.FC<RetrospectiveIngestionModalPr
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-canvas cursor-pointer transition-colors"
+            className="p-2 rounded-full text-secondary hover:text-primary hover:bg-canvas cursor-pointer transition-all hover:scale-110 active:scale-95"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs flex items-center gap-2.5">
+          <div className="mt-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs flex items-center gap-2.5">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -82,7 +95,7 @@ export const RetrospectiveIngestionModal: React.FC<RetrospectiveIngestionModalPr
 
         {!result ? (
           <div className="space-y-4 py-4">
-            <div className="p-3.5 rounded-xl bg-canvas border border-hairline text-xs space-y-2 shadow-xs">
+            <div className="p-3.5 rounded-2xl bg-canvas border border-hairline text-xs space-y-2 shadow-xs">
               <span className="text-[10px] font-bold uppercase tracking-wider text-secondary block">
                 Alcance del Proceso de Síntesis
               </span>
@@ -123,7 +136,7 @@ export const RetrospectiveIngestionModal: React.FC<RetrospectiveIngestionModalPr
               <button
                 type="button"
                 onClick={onClose}
-                className="craft-btn-secondary text-xs"
+                className="craft-btn-secondary text-xs rounded-full"
               >
                 Cancelar
               </button>
@@ -131,7 +144,7 @@ export const RetrospectiveIngestionModal: React.FC<RetrospectiveIngestionModalPr
                 type="button"
                 disabled={running}
                 onClick={handleRunIngestion}
-                className="craft-btn-primary text-xs font-semibold"
+                className="craft-btn-primary text-xs font-semibold rounded-full"
               >
                 {running ? 'Sintetizando...' : 'Iniciar Síntesis'}
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -140,12 +153,12 @@ export const RetrospectiveIngestionModal: React.FC<RetrospectiveIngestionModalPr
           </div>
         ) : (
           <div className="space-y-4 py-4 text-xs">
-            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center gap-2.5 shadow-xs">
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center gap-2.5 shadow-xs">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span className="font-medium">{result.message}</span>
             </div>
 
-            <div className="p-4 rounded-xl bg-canvas border border-hairline space-y-2 shadow-xs text-xs">
+            <div className="p-4 rounded-2xl bg-canvas border border-hairline space-y-2 shadow-xs text-xs">
               <span className="text-secondary block">
                 Versión de Memoria: <strong className="text-primary">{result.version}</strong>
               </span>
@@ -161,14 +174,14 @@ export const RetrospectiveIngestionModal: React.FC<RetrospectiveIngestionModalPr
               <button
                 type="button"
                 onClick={onClose}
-                className="craft-btn-primary text-xs"
+                className="craft-btn-primary text-xs rounded-full"
               >
                 Cerrar y Ver Memoria
               </button>
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

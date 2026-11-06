@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { X, Link2, ArrowRight, CheckCircle2, AlertTriangle, User, Loader2 } from 'lucide-react';
 import { api, InvitationPreview, HelpDeskDetails } from '../api';
 
@@ -78,12 +79,24 @@ export const JoinDeskModal: React.FC<JoinDeskModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-lg rounded-3xl border border-hairline bg-surface p-6 sm:p-8 shadow-2xl transition-all">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+    >
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ type: "spring", duration: 0.3, bounce: 0.15 }}
+        className="relative w-full max-w-lg rounded-3xl border border-hairline bg-surface p-6 sm:p-8 shadow-2xl transition-all"
+      >
         {/* Header */}
         <div className="flex items-start justify-between pb-5 border-b border-hairline">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-canvas border border-hairline text-rose-500 flex items-center justify-center shadow-xs">
+            <div className="w-10 h-10 rounded-full bg-canvas border border-hairline text-rose-500 flex items-center justify-center shadow-xs">
               <Link2 className="w-5 h-5" />
             </div>
             <div>
@@ -98,7 +111,7 @@ export const JoinDeskModal: React.FC<JoinDeskModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-secondary hover:text-primary hover:bg-canvas transition-colors"
+            className="p-2 rounded-full text-secondary hover:text-primary hover:bg-canvas transition-all hover:scale-110 active:scale-95"
           >
             <X className="w-5 h-5" />
           </button>
@@ -125,7 +138,7 @@ export const JoinDeskModal: React.FC<JoinDeskModalProps> = ({
                 }}
                 onBlur={() => handlePreview(code)}
                 placeholder="Pega aquí el link (ej. inv_a8c2f1...)"
-                className="w-full pl-4 pr-10 py-3 rounded-xl bg-canvas border border-hairline text-primary placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-sm font-medium transition-all"
+                className="w-full pl-4 pr-10 py-3 rounded-full bg-canvas border border-hairline text-primary placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-sm font-medium transition-all"
                 required
               />
               {loadingPreview && (
@@ -141,8 +154,8 @@ export const JoinDeskModal: React.FC<JoinDeskModalProps> = ({
 
           {/* Invitation Preview Feedback */}
           {preview && preview.valid && (
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2 animate-fade-in">
-              <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold uppercase tracking-wider">
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 space-y-2">
+              <div className="flex items-center gap-2 text-rose-500 text-xs font-bold uppercase tracking-wider">
                 <CheckCircle2 className="w-4 h-4" />
                 Invitación Válida Confirmada
               </div>
@@ -154,7 +167,7 @@ export const JoinDeskModal: React.FC<JoinDeskModalProps> = ({
                 </div>
                 <div className="sm:text-right">
                   <span className="text-secondary block">Rol asignado:</span>
-                  <span className="inline-flex items-center gap-1 font-bold text-rose-500 uppercase tracking-wider text-[11px] px-2 py-0.5 rounded-md bg-canvas border border-hairline">
+                  <span className="inline-flex items-center gap-1 font-bold text-rose-500 uppercase tracking-wider text-[11px] px-3 py-1 rounded-full bg-canvas border border-hairline">
                     <User className="w-3 h-3" />
                     {preview.role === 'agent' ? 'Soporte / Agente' : (preview.role === 'admin' ? 'Administrador' : 'Usuario / Empleado')}
                   </span>
@@ -169,7 +182,7 @@ export const JoinDeskModal: React.FC<JoinDeskModalProps> = ({
           )}
 
           {errorMsg && (
-            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 flex items-start gap-3 animate-fade-in">
+            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 flex items-start gap-3">
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
               <div className="text-xs text-rose-500 font-medium">
                 {errorMsg}
@@ -182,14 +195,14 @@ export const JoinDeskModal: React.FC<JoinDeskModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="craft-btn-secondary"
+              className="craft-btn-secondary text-xs rounded-full"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={joining || !code.trim() || (preview !== null && !preview.valid)}
-              className="craft-btn-primary shadow-sm"
+              className="craft-btn-primary text-xs shadow-sm rounded-full"
             >
               {joining ? (
                 <>
@@ -205,7 +218,7 @@ export const JoinDeskModal: React.FC<JoinDeskModalProps> = ({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

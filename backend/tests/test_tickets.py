@@ -96,3 +96,59 @@ def test_create_and_list_tickets(client, auth_headers):
     assert resolve_res.status_code == 200
     assert resolve_res.json()["status"] == "resolved"
     assert resolve_res.json()["resolved_at"] is not None
+
+
+def test_update_ticket_priority_and_unassigned_flow(client, auth_headers):
+    # 1. Create a Help Desk with enable_ai = False
+    desk_payload = {
+        "name": "Mesa Manual Soporte",
+        "slug": "mesa-manual-soporte",
+        "description": "Mesa sin IA para flujo de triaje manual",
+        "enable_ai": False,
+        "categories": [
+            {"name": "Soporte General", "color": "#f43f5e", "icon": "Layers"}
+        ],
+        "priorities": [
+            {"name": "Baja", "level": 1, "color": "#f43f5e", "sla_response_hours": 24, "sla_resolution_hours": 72},
+            {"name": "Crítica", "level": 4, "color": "#f43f5e", "sla_response_hours": 1, "sla_resolution_hours": 4}
+        ]
+    }
+    desk_res = client.post("/api/desks/wizard", json=desk_payload, headers=auth_headers)
+    assert desk_res.status_code == 201
+    desk_data = desk_res.json()
+    assert desk_data["is_ai_active"] is False
+    low_prio_id = desk_data["priorities"][0]["id"]
+    crit_prio_id = desk_data["priorities"][1]["id"]
+
+    # 2. Requester creates ticket without priority
+    ticket_payload = {
+        "title": "Problema con impresora central",
+        "description": "Atasco de papel recurrente en la bandeja 2",
+    }
+    t_res = client.post("/api/desks/mesa-manual-soporte/tickets", json=ticket_payload, headers=auth_headers)
+    assert t_res.status_code == 201
+    t_data = t_res.json()
+    assert t_data["priority_id"] is None
+    assert t_data["priority_name"] == "Sin prioridad asignada"
+
+    # 3. Staff triages and updates priority to Crítica
+    prio_update_res = client.patch(
+        f"/api/desks/mesa-manual-soporte/tickets/{t_data['ticket_code']}/priority",
+        json={"priority_id": crit_prio_id},
+        headers=auth_headers
+    )
+    assert prio_update_res.status_code == 200
+    updated_ticket = prio_update_res.json()
+    assert updated_ticket["priority_id"] == crit_prio_id
+    assert updated_ticket["priority_name"] == "Crítica"
+    assert updated_ticket["sla_resolution_hours"] == 4
+    assert updated_ticket["sla_due_at"] is not None
+
+    # 4. Inactive or invalid priority returns 404
+    invalid_prio_res = client.patch(
+        f"/api/desks/mesa-manual-soporte/tickets/{t_data['ticket_code']}/priority",
+        json={"priority_id": 999999},
+        headers=auth_headers
+    )
+    assert invalid_prio_res.status_code == 404
+

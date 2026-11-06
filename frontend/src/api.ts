@@ -47,6 +47,7 @@ export interface HelpDeskListItem {
   slug: string;
   description?: string;
   is_ai_enabled: boolean;
+  is_ai_active?: boolean;
   role: string;
   members_count: number;
   tickets_count: number;
@@ -60,6 +61,7 @@ export interface HelpDeskDetails {
   slug: string;
   description?: string;
   is_ai_enabled: boolean;
+  is_ai_active?: boolean;
   created_at: string;
   categories: Category[];
   priorities: Priority[];
@@ -529,6 +531,16 @@ export const api = {
       body: JSON.stringify({ status: statusVal, diagnostic }),
     });
     if (!res.ok) throw new Error('Error al actualizar estado del ticket');
+    return res.json();
+  },
+
+  async updateTicketPriority(slug: string, ticketCode: string, priority_id: number): Promise<TicketItem> {
+    const res = await fetch(`${API_BASE}/desks/${slug}/tickets/${ticketCode}/priority`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ priority_id }),
+    });
+    if (!res.ok) throw new Error('Error al actualizar prioridad del ticket');
     return res.json();
   },
 
